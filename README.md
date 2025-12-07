@@ -44,6 +44,15 @@ cd backend
 npm install
 ```
 
+Create `backend/.env`:
+```env
+PORT=5000
+MONGODB_URI=mongodb+srv://reshamkumar4533_db_user:Bzno2aXjsE03dcVl@cluster0.0qfhjrn.mongodb.net/?appName=Cluster0
+JWT_SECRET=your_secret_key_here
+JWT_EXPIRES_IN=7d
+LOG_LEVEL=info
+```
+
 Run backend:
 ```bash
 npm run dev
@@ -147,4 +156,6 @@ This creates:
 - Students are managed entirely by School Admins
 - Each school's data is completely isolated
 - School approval is required before school admins can login
+
+
 

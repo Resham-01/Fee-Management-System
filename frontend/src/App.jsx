@@ -83,6 +83,7 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/payments/callback" element={<Navigate to="/parent" replace />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>

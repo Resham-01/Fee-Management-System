@@ -39,3 +39,5 @@ feeStructureSchema.virtual('actualFee').get(function () {
 
 module.exports = mongoose.model('FeeStructure', feeStructureSchema);
 
+
+
