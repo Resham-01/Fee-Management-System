@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+<<<<<<< HEAD
 import { useToast } from '../context/ToastContext';
+=======
+import { toast } from 'react-hot-toast';
+>>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
 import PasswordInput from '../components/PasswordInput';
 
 const LoginPage = () => {
@@ -24,15 +28,25 @@ const LoginPage = () => {
     if (result.success) {
       // Check if user role matches selected role
       if (result.user.role !== selectedRole) {
+<<<<<<< HEAD
         const msg = `This account is a "${result.user.role}" account. Please choose the correct login type.`;
         setError(msg);
         showToast(msg, 'error');
+=======
+        const errorMsg = `This account is a "${result.user.role}" account. Please choose the correct login type.`;
+        setError(errorMsg);
+        toast.error(errorMsg);
+>>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
         setLoading(false);
         return;
       }
 
+<<<<<<< HEAD
       showToast('Login successful', 'success');
 
+=======
+      toast.success('Successfully logged in!');
+>>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
       // Redirect based on role
       if (result.user.role === 'super_admin') {
         navigate('/super-admin');
@@ -42,8 +56,14 @@ const LoginPage = () => {
         navigate('/parent');
       }
     } else {
+<<<<<<< HEAD
       setError(result.message);
       showToast(result.message, 'error');
+=======
+      const errorMsg = result.message || 'Login failed. Please check your credentials.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+>>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
       setLoading(false);
     }
   };
