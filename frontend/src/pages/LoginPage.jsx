@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
 import PasswordInput from '../components/PasswordInput';
 
 const LoginPage = () => {
@@ -22,11 +23,14 @@ const LoginPage = () => {
     if (result.success) {
       // Check if user role matches selected role
       if (result.user.role !== selectedRole) {
-        setError(`This account is a "${result.user.role}" account. Please choose the correct login type.`);
+        const errorMsg = `This account is a "${result.user.role}" account. Please choose the correct login type.`;
+        setError(errorMsg);
+        toast.error(errorMsg);
         setLoading(false);
         return;
       }
 
+      toast.success('Successfully logged in!');
       // Redirect based on role
       if (result.user.role === 'super_admin') {
         navigate('/super-admin');
@@ -36,7 +40,9 @@ const LoginPage = () => {
         navigate('/parent');
       }
     } else {
-      setError(result.message);
+      const errorMsg = result.message || 'Login failed. Please check your credentials.';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
     }
   };

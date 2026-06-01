@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import SchoolRegisterPage from './pages/SchoolRegisterPage';
@@ -94,10 +95,12 @@ const AppContent = () => {
 const App = () => {
   return (
     <AuthProvider>
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <AppContent />
     </AuthProvider>
   );
 };
 
 export default App;
+
 
