@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-<<<<<<< HEAD
 import { useToast } from '../context/ToastContext';
-=======
-import { toast } from 'react-hot-toast';
->>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
 import PasswordInput from '../components/PasswordInput';
 
 const LoginPage = () => {
@@ -26,28 +22,16 @@ const LoginPage = () => {
     const result = await login(email, password);
 
     if (result.success) {
-      // Check if user role matches selected role
       if (result.user.role !== selectedRole) {
-<<<<<<< HEAD
         const msg = `This account is a "${result.user.role}" account. Please choose the correct login type.`;
         setError(msg);
         showToast(msg, 'error');
-=======
-        const errorMsg = `This account is a "${result.user.role}" account. Please choose the correct login type.`;
-        setError(errorMsg);
-        toast.error(errorMsg);
->>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
         setLoading(false);
         return;
       }
 
-<<<<<<< HEAD
       showToast('Login successful', 'success');
 
-=======
-      toast.success('Successfully logged in!');
->>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
-      // Redirect based on role
       if (result.user.role === 'super_admin') {
         navigate('/super-admin');
       } else if (result.user.role === 'school_admin') {
@@ -56,14 +40,9 @@ const LoginPage = () => {
         navigate('/parent');
       }
     } else {
-<<<<<<< HEAD
-      setError(result.message);
-      showToast(result.message, 'error');
-=======
-      const errorMsg = result.message || 'Login failed. Please check your credentials.';
-      setError(errorMsg);
-      toast.error(errorMsg);
->>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
+      const msg = result.message || 'Login failed. Please check your credentials.';
+      setError(msg);
+      showToast(msg, 'error');
       setLoading(false);
     }
   };
@@ -86,35 +65,37 @@ const LoginPage = () => {
         <h2 className="text-2xl font-bold text-center mb-2 text-gray-800">Welcome Back</h2>
         <p className="text-center text-gray-600 mb-8">Login to your account</p>
 
-        {/* Role Selection */}
         <div className="grid grid-cols-3 gap-2 mb-6">
           <button
             type="button"
             onClick={() => setSelectedRole('parent')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${selectedRole === 'parent'
+            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+              selectedRole === 'parent'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-              }`}
+            }`}
           >
             Parent
           </button>
           <button
             type="button"
             onClick={() => setSelectedRole('school_admin')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${selectedRole === 'school_admin'
+            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+              selectedRole === 'school_admin'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-              }`}
+            }`}
           >
             School Admin
           </button>
           <button
             type="button"
             onClick={() => setSelectedRole('super_admin')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${selectedRole === 'super_admin'
+            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+              selectedRole === 'super_admin'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-              }`}
+            }`}
           >
             Super Admin
           </button>
@@ -145,7 +126,11 @@ const LoginPage = () => {
           {error && (
             <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
               </svg>
               {error}
             </div>
@@ -163,12 +148,18 @@ const LoginPage = () => {
         <div className="mt-8 text-center text-sm">
           <span className="text-gray-500">Don't have an account? </span>
           {selectedRole === 'parent' && (
-            <a href="/register-parent" className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors">
+            <a
+              href="/register-parent"
+              className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors"
+            >
               Register as Parent
             </a>
           )}
           {selectedRole === 'school_admin' && (
-            <a href="/register-school" className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors">
+            <a
+              href="/register-school"
+              className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors"
+            >
               Register School
             </a>
           )}
@@ -179,4 +170,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

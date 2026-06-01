@@ -11,7 +11,6 @@
     "axios": "^1.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.20.1"
   },
   "devDependencies": {
@@ -24,12 +23,3 @@
     "vite": "^5.0.8"
   }
 }
-<<<<<<< HEAD
-
-
-
-
-
-
-=======
->>>>>>> 1ec8abd91af216d15260297b7e7bad239ad89a81
