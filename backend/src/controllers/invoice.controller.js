@@ -2,24 +2,50 @@ const Joi = require('joi');
 const Invoice = require('../models/Invoice');
 const Student = require('../models/Student');
 const logger = require('../config/logger');
+const { USER_ROLES } = require('../models/User');
+const { getSchoolId } = require('../utils/getSchoolId');
 
 const invoiceSchema = Joi.object({
   student: Joi.string().required(),
-  amount: Joi.number().required(),
+  amount: Joi.number().required().min(0),
   currency: Joi.string().default('NPR'),
   dueDate: Joi.date().required(),
   term: Joi.string().required(),
   description: Joi.string().allow(''),
+  status: Joi.string().valid('pending', 'paid', 'overdue').default('pending'),
 });
+
+const updateInvoiceSchema = invoiceSchema;
+
+const findInvoiceForUser = async (invoiceId, user, { allowForbidden = false } = {}) => {
+  const invoice = await Invoice.findById(invoiceId);
+  if (!invoice) return { invoice: null, forbidden: false };
+
+  if (user.role === USER_ROLES.SUPER_ADMIN) {
+    return { invoice, forbidden: false };
+  }
+
+  const userSchoolId = getSchoolId(user);
+  if (userSchoolId && invoice.school.toString() === userSchoolId) {
+    return { invoice, forbidden: false };
+  }
+
+  if (allowForbidden) {
+    return { invoice: null, forbidden: true };
+  }
+
+  return { invoice: null, forbidden: false };
+};
 
 // School Admin: Get all invoices for their school
 exports.getSchoolInvoices = async (req, res) => {
   try {
-    if (!req.user.school) {
+    const schoolId = getSchoolId(req.user);
+    if (!schoolId) {
       return res.status(403).json({ message: 'School admin must be linked to a school' });
     }
 
-    const invoices = await Invoice.find({ school: req.user.school })
+    const invoices = await Invoice.find({ school: schoolId })
       .populate('student', 'firstName lastName studentCode className section')
       .sort({ createdAt: -1 });
 
@@ -38,20 +64,24 @@ exports.createInvoice = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    if (!req.user.school) {
-      return res.status(403).json({ message: 'School admin must be linked to a school' });
+    const student = await Student.findById(value.student);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
     }
 
-    // Verify student belongs to this school
-    const student = await Student.findOne({ _id: value.student, school: req.user.school });
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found in your school' });
+    if (req.user.role === USER_ROLES.SUPER_ADMIN) {
+      // Super admin can create invoices for any school via student record
+    } else {
+      const schoolId = getSchoolId(req.user);
+      if (!schoolId || student.school.toString() !== schoolId) {
+        return res.status(404).json({ message: 'Student not found in your school' });
+      }
     }
 
     const invoice = await Invoice.create({
       ...value,
-      school: req.user.school,
-      status: 'pending',
+      school: student.school,
+      status: value.status || 'pending',
     });
 
     const populated = await Invoice.findById(invoice._id).populate(
@@ -69,12 +99,12 @@ exports.createInvoice = async (req, res) => {
 // Parent: Get invoices for their children
 exports.getParentInvoices = async (req, res) => {
   try {
-    if (!req.user.school) {
+    const schoolId = getSchoolId(req.user);
+    if (!schoolId) {
       return res.status(403).json({ message: 'Parent must be linked to a school' });
     }
 
-    // Find all students linked to this parent
-    const students = await Student.find({ parent: req.user._id, school: req.user.school });
+    const students = await Student.find({ parent: req.user._id, school: schoolId });
     const studentIds = students.map((s) => s._id);
 
     const invoices = await Invoice.find({ student: { $in: studentIds } })
@@ -88,5 +118,63 @@ exports.getParentInvoices = async (req, res) => {
   }
 };
 
+// School Admin / Super Admin: Update invoice
+exports.updateInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error, value } = updateInvoiceSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
 
+    const { invoice, forbidden } = await findInvoiceForUser(id, req.user, { allowForbidden: true });
+    if (forbidden) {
+      return res.status(403).json({ message: 'You do not have permission to update this invoice' });
+    }
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    const schoolId = req.user.role === USER_ROLES.SUPER_ADMIN ? invoice.school : getSchoolId(req.user);
+    const student = await Student.findOne({ _id: value.student, school: schoolId });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found in this school' });
+    }
+
+    Object.assign(invoice, value);
+    await invoice.save();
+
+    const populated = await Invoice.findById(invoice._id).populate(
+      'student',
+      'firstName lastName studentCode className section'
+    );
+
+    res.json(populated);
+  } catch (err) {
+    logger.error('Update invoice error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// School Admin / Super Admin: Delete invoice
+exports.deleteInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { invoice, forbidden } = await findInvoiceForUser(id, req.user, { allowForbidden: true });
+    if (forbidden) {
+      return res.status(403).json({ message: 'You do not have permission to delete this invoice' });
+    }
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    await Invoice.findByIdAndDelete(invoice._id);
+
+    res.json({ message: 'Invoice deleted successfully' });
+  } catch (err) {
+    logger.error('Delete invoice error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 

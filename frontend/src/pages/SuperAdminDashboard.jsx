@@ -3,13 +3,29 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import NotificationPanel from '../components/NotificationPanel';
+import ActionButtons from '../components/ActionButtons';
+import { useConfirm } from '../hooks/useConfirm';
+import { useToast, getErrorMessage } from '../context/ToastContext';
+
+const emptyPlanForm = () => ({
+  name: '',
+  pricePerMonth: '',
+  maxStudents: '',
+  features: '',
+  isActive: true,
+});
 
 const SuperAdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm, ConfirmDialogElement } = useConfirm();
+  const { showToast } = useToast();
   const [schools, setSchools] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showPlanForm, setShowPlanForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [planForm, setPlanForm] = useState(emptyPlanForm());
 
   useEffect(() => {
     fetchData();
@@ -30,21 +46,93 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const handleApprove = async (schoolId) => {
+  const handleApprove = async (schoolId, schoolName) => {
+    const ok = await confirm({
+      title: 'Approve school?',
+      message: `Approve "${schoolName}" so they can use the system.`,
+      confirmLabel: 'Approve',
+      variant: 'info',
+    });
+    if (!ok) return;
     try {
       await apiClient.patch(`/schools/${schoolId}/approve`);
+      showToast('School approved successfully', 'success');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to approve school');
+      showToast(getErrorMessage(err, 'Failed to approve school'), 'error');
     }
   };
 
-  const handleReject = async (schoolId) => {
+  const handleReject = async (schoolId, schoolName) => {
+    const ok = await confirm({
+      title: 'Reject school?',
+      message: `"${schoolName}" will be marked as not approved.`,
+      confirmLabel: 'Reject',
+    });
+    if (!ok) return;
     try {
       await apiClient.patch(`/schools/${schoolId}/reject`);
+      showToast('School rejected', 'info');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to reject school');
+      showToast(getErrorMessage(err, 'Failed to reject school'), 'error');
+    }
+  };
+
+  const handlePlanSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: planForm.name,
+        pricePerMonth: parseFloat(planForm.pricePerMonth),
+        maxStudents: parseInt(planForm.maxStudents, 10),
+        features: planForm.features
+          .split(',')
+          .map((f) => f.trim())
+          .filter(Boolean),
+        isActive: planForm.isActive,
+      };
+      const isEditingPlan = !!editingPlan;
+      if (editingPlan) {
+        await apiClient.put(`/plans/${editingPlan._id}`, payload);
+      } else {
+        await apiClient.post('/plans', payload);
+      }
+      setShowPlanForm(false);
+      setEditingPlan(null);
+      setPlanForm(emptyPlanForm());
+      showToast(isEditingPlan ? 'Plan updated successfully' : 'Plan created successfully', 'success');
+      fetchData();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to save plan'), 'error');
+    }
+  };
+
+  const handleEditPlan = (plan) => {
+    setEditingPlan(plan);
+    setPlanForm({
+      name: plan.name,
+      pricePerMonth: plan.pricePerMonth,
+      maxStudents: plan.maxStudents,
+      features: (plan.features || []).join(', '),
+      isActive: plan.isActive !== false,
+    });
+    setShowPlanForm(true);
+  };
+
+  const handleDeletePlan = async (planId, planName) => {
+    const ok = await confirm({
+      title: 'Delete plan?',
+      message: `Remove subscription plan "${planName}" permanently.`,
+      confirmLabel: 'Yes, delete',
+    });
+    if (!ok) return;
+    try {
+      await apiClient.delete(`/plans/${planId}`);
+      showToast('Plan deleted successfully', 'success');
+      fetchData();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete plan'), 'error');
     }
   };
 
@@ -78,7 +166,6 @@ const SuperAdminDashboard = () => {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-gray-600 text-sm">Total Schools</h3>
@@ -94,7 +181,6 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        {/* Schools Table */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="p-6 border-b">
             <h2 className="text-xl font-bold text-gray-800">Schools</h2>
@@ -114,7 +200,7 @@ const SuperAdminDashboard = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {schools.map((school) => (
-                    <tr key={school._id}>
+                    <tr key={school._id} className="hover:bg-slate-50/80">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => navigate(`/super-admin/school/${school._id}`)}
@@ -139,30 +225,21 @@ const SuperAdminDashboard = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2">
-                          {!school.isApproved ? (
-                            <>
-                              <button
-                                onClick={() => handleApprove(school._id)}
-                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleReject(school._id)}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {!school.isApproved && (
                             <button
-                              onClick={() => handleReject(school._id)}
-                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                              onClick={() => handleApprove(school._id, school.name)}
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm"
                             >
-                              Reject
+                              Approve
                             </button>
                           )}
+                          <button
+                            onClick={() => handleReject(school._id, school.name)}
+                            className="px-3 py-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm font-medium shadow-sm"
+                          >
+                            Reject
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -173,26 +250,119 @@ const SuperAdminDashboard = () => {
           )}
         </div>
 
-        {/* Plans */}
         <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b">
+          <div className="p-6 border-b flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-800">Subscription Plans</h2>
+            <button
+              onClick={() => {
+                setShowPlanForm(true);
+                setEditingPlan(null);
+                setPlanForm(emptyPlanForm());
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md"
+            >
+              Add Plan
+            </button>
           </div>
+
+          {showPlanForm && (
+            <div className="p-6 border-b bg-gradient-to-br from-slate-50 to-indigo-50">
+              <form onSubmit={handlePlanSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name</label>
+                  <input
+                    type="text"
+                    value={planForm.name}
+                    onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price / Month (NPR)</label>
+                  <input
+                    type="number"
+                    value={planForm.pricePerMonth}
+                    onChange={(e) => setPlanForm({ ...planForm, pricePerMonth: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Students</label>
+                  <input
+                    type="number"
+                    value={planForm.maxStudents}
+                    onChange={(e) => setPlanForm({ ...planForm, maxStudents: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Features (comma separated)</label>
+                  <input
+                    type="text"
+                    value={planForm.features}
+                    onChange={(e) => setPlanForm({ ...planForm, features: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    placeholder="Invoices, Reports, SMS"
+                  />
+                </div>
+                <div className="flex items-center gap-2 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    id="planActive"
+                    checked={planForm.isActive}
+                    onChange={(e) => setPlanForm({ ...planForm, isActive: e.target.checked })}
+                    className="rounded"
+                  />
+                  <label htmlFor="planActive" className="text-sm font-medium text-gray-700">
+                    Plan is active
+                  </label>
+                </div>
+                <div className="flex gap-2 md:col-span-2">
+                  <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    {editingPlan ? 'Update Plan' : 'Create Plan'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPlanForm(false);
+                      setEditingPlan(null);
+                    }}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {loading ? (
             <div className="p-6 text-center">Loading...</div>
           ) : (
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {plans.map((plan) => (
-                  <div key={plan._id} className="border rounded-lg p-4">
-                    <h3 className="font-bold text-lg mb-2">{plan.name}</h3>
+                  <div
+                    key={plan._id}
+                    className="border border-slate-200 rounded-xl p-5 bg-gradient-to-br from-white to-slate-50 shadow-sm hover:shadow-md transition"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-bold text-lg text-slate-800">{plan.name}</h3>
+                      <ActionButtons
+                        onEdit={() => handleEditPlan(plan)}
+                        onDelete={() => handleDeletePlan(plan._id, plan.name)}
+                      />
+                    </div>
                     <p className="text-2xl font-bold text-blue-600 mb-2">NPR {plan.pricePerMonth}/month</p>
                     <p className="text-sm text-gray-600 mb-2">Max Students: {plan.maxStudents}</p>
-                    <div className="mt-2">
+                    <div className="mt-2 flex flex-wrap gap-1">
                       {plan.features?.map((feature, idx) => (
                         <span
                           key={idx}
-                          className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-1 mb-1"
+                          className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
                         >
                           {feature}
                         </span>
@@ -205,9 +375,9 @@ const SuperAdminDashboard = () => {
           )}
         </div>
       </div>
+      {ConfirmDialogElement}
     </div>
   );
 };
 
 export default SuperAdminDashboard;
-

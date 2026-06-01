@@ -3,6 +3,7 @@ const Joi = require('joi');
 const { User, USER_ROLES } = require('../models/User');
 const School = require('../models/School');
 const logger = require('../config/logger');
+const { deriveShortName } = require('../utils/schoolShortName');
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -100,6 +101,7 @@ exports.registerSchool = async (req, res) => {
     // Create school (not approved yet)
     const school = await School.create({
       name: schoolName,
+      shortName: deriveShortName(schoolName),
       address,
       contactEmail,
       contactPhone,
@@ -191,6 +193,9 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+
 
 
 

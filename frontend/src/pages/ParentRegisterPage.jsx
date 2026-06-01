@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
+import { useToast, getErrorMessage } from '../context/ToastContext';
 
 const ParentRegisterPage = () => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -42,11 +44,14 @@ const ParentRegisterPage = () => {
     try {
       await apiClient.post('/auth/register-parent', formData);
       setSuccess('Parent registered successfully!');
+      showToast('Parent account created successfully', 'success');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const msg = getErrorMessage(err, 'Registration failed');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }

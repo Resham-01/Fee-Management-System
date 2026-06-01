@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
+import { useToast, getErrorMessage } from '../context/ToastContext';
 
 const ChangePasswordPage = () => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     oldPassword: '',
     newPassword: '',
@@ -25,11 +27,13 @@ const ChangePasswordPage = () => {
 
     if (formData.newPassword !== formData.confirmPassword) {
       setError('New passwords do not match');
+      showToast('New passwords do not match', 'error');
       return;
     }
 
     if (formData.newPassword.length < 6) {
       setError('Password must be at least 6 characters');
+      showToast('Password must be at least 6 characters', 'error');
       return;
     }
 
@@ -41,11 +45,14 @@ const ChangePasswordPage = () => {
         newPassword: formData.newPassword,
       });
       setSuccess('Password changed successfully!');
+      showToast('Password changed successfully', 'success');
       setTimeout(() => {
         navigate(-1);
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change password');
+      const msg = getErrorMessage(err, 'Failed to change password');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -107,6 +114,9 @@ const ChangePasswordPage = () => {
 };
 
 export default ChangePasswordPage;
+
+
+
 
 
 

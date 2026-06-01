@@ -3,14 +3,29 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
 import NotificationPanel from '../components/NotificationPanel';
+import ActionButtons from '../components/ActionButtons';
+import { useConfirm } from '../hooks/useConfirm';
+import { useToast, getErrorMessage } from '../context/ToastContext';
 
 const SchoolDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { confirm, ConfirmDialogElement } = useConfirm();
+  const { showToast } = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notifying, setNotifying] = useState(false);
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  const [invoiceForm, setInvoiceForm] = useState({
+    student: '',
+    amount: '',
+    dueDate: '',
+    term: '',
+    description: '',
+    status: 'pending',
+  });
 
   useEffect(() => {
     fetchSchoolDetails();
@@ -22,33 +37,107 @@ const SchoolDetailPage = () => {
       setData(response.data);
     } catch (err) {
       console.error('Failed to fetch school details');
-      alert('Failed to load school details');
+      showToast('Failed to load school details', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  const resetInvoiceForm = () => ({
+    student: '',
+    amount: '',
+    dueDate: '',
+    term: '',
+    description: '',
+    status: 'pending',
+  });
+
+  const handleInvoiceSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        ...invoiceForm,
+        amount: parseFloat(invoiceForm.amount),
+        dueDate: new Date(invoiceForm.dueDate),
+      };
+      const isEditingInvoice = !!editingInvoice;
+      if (editingInvoice) {
+        await apiClient.put(`/invoices/${editingInvoice._id}`, payload);
+      } else {
+        await apiClient.post('/invoices', payload);
+      }
+      setShowInvoiceForm(false);
+      setEditingInvoice(null);
+      setInvoiceForm(resetInvoiceForm());
+      showToast(isEditingInvoice ? 'Invoice updated successfully' : 'Invoice created successfully', 'success');
+      fetchSchoolDetails();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to save invoice'), 'error');
+    }
+  };
+
+  const handleEditInvoice = (invoice) => {
+    setEditingInvoice(invoice);
+    setInvoiceForm({
+      student: invoice.student?._id || '',
+      amount: invoice.amount,
+      dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '',
+      term: invoice.term,
+      description: invoice.description || '',
+      status: invoice.status,
+    });
+    setShowInvoiceForm(true);
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    const ok = await confirm({
+      title: 'Delete invoice?',
+      message: 'This invoice will be permanently removed.',
+      confirmLabel: 'Yes, delete',
+    });
+    if (!ok) return;
+    try {
+      await apiClient.delete(`/invoices/${invoiceId}`);
+      showToast('Invoice deleted successfully', 'success');
+      fetchSchoolDetails();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete invoice'), 'error');
+    }
+  };
+
   const handleNotifyParents = async () => {
-    if (!confirm('Send notification to all parents about pending fees?')) return;
+    const ok = await confirm({
+      title: 'Notify all parents?',
+      message: 'Send notification to all parents about pending fees for this school.',
+      confirmLabel: 'Send',
+      variant: 'info',
+    });
+    if (!ok) return;
     setNotifying(true);
     try {
       const response = await apiClient.post(`/schools/${id}/notify-parents`);
-      alert(`Notifications sent to ${response.data.notifications.length} parents`);
+      showToast(`Notifications sent to ${response.data.notifications.length} parents`, 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send notifications');
+      showToast(getErrorMessage(err, 'Failed to send notifications'), 'error');
     } finally {
       setNotifying(false);
     }
   };
 
   const handleNotifySchool = async () => {
-    if (!confirm('Send notification to school admin about pending fees?')) return;
+    const ok = await confirm({
+      title: 'Notify school admin?',
+      message: 'Send notification to the school admin about pending fees.',
+      confirmLabel: 'Send',
+      variant: 'info',
+    });
+    if (!ok) return;
     setNotifying(true);
     try {
       const response = await apiClient.post(`/schools/${id}/notify-school`);
-      alert(`Notification sent to ${response.data.schoolAdmin.name} (${response.data.schoolAdmin.email})`);
+      showToast(`Notification sent to ${response.data.schoolAdmin.name}`, 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send notification');
+      showToast(getErrorMessage(err, 'Failed to send notification'), 'error');
     } finally {
       setNotifying(false);
     }
@@ -222,9 +311,107 @@ const SchoolDetailPage = () => {
 
         {/* Invoices Table */}
         <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b">
+          <div className="p-6 border-b flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-800">Invoices ({invoices.length})</h2>
+            <button
+              onClick={() => {
+                setShowInvoiceForm(true);
+                setEditingInvoice(null);
+                setInvoiceForm(resetInvoiceForm());
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md"
+            >
+              Add Invoice
+            </button>
           </div>
+
+          {showInvoiceForm && (
+            <div className="p-6 border-b bg-gradient-to-br from-slate-50 to-blue-50">
+              <form onSubmit={handleInvoiceSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                  <select
+                    value={invoiceForm.student}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, student: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg bg-white"
+                  >
+                    <option value="">Select student</option>
+                    {students.map((student) => (
+                      <option key={student._id} value={student._id}>
+                        {student.firstName} {student.lastName} ({student.studentCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (NPR)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={invoiceForm.amount}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+                  <input
+                    type="text"
+                    value={invoiceForm.term}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, term: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={invoiceForm.dueDate}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={invoiceForm.status}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg bg-white"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={invoiceForm.description}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-2">
+                  <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    {editingInvoice ? 'Update' : 'Create'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInvoiceForm(false)}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -234,11 +421,12 @@ const SchoolDetailPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {invoices.map((invoice) => (
-                  <tr key={invoice._id}>
+                  <tr key={invoice._id} className="hover:bg-slate-50/80">
                     <td className="px-6 py-4 whitespace-nowrap">
                       {invoice.student?.firstName} {invoice.student?.lastName} ({invoice.student?.studentCode})
                     </td>
@@ -262,6 +450,12 @@ const SchoolDetailPage = () => {
                         </span>
                       )}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <ActionButtons
+                        onEdit={() => handleEditInvoice(invoice)}
+                        onDelete={() => handleDeleteInvoice(invoice._id)}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -269,6 +463,7 @@ const SchoolDetailPage = () => {
           </div>
         </div>
       </div>
+      {ConfirmDialogElement}
     </div>
   );
 };

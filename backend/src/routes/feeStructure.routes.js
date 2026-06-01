@@ -3,6 +3,7 @@ const {
   getFeeStructures,
   createFeeStructure,
   updateFeeStructure,
+  deleteFeeStructure,
   generateMonthlyInvoices,
 } = require('../controllers/feeStructure.controller');
 const { auth } = require('../middleware/auth.middleware');
@@ -17,9 +18,13 @@ router.use(permitRoles(USER_ROLES.SCHOOL_ADMIN));
 router.get('/', getFeeStructures);
 router.post('/', createFeeStructure);
 router.put('/:id', updateFeeStructure);
+router.delete('/:id', deleteFeeStructure);
 router.post('/generate-invoices', generateMonthlyInvoices);
 
 module.exports = router;
+
+
+
 
 
 

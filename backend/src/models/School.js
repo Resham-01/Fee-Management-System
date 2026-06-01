@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const schoolSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
+    shortName: { type: String, trim: true },
     address: { type: String, required: true },
     contactEmail: { type: String, required: true },
     contactPhone: { type: String, required: true },
@@ -16,6 +17,9 @@ const schoolSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('School', schoolSchema);
+
+
+
 
 
 

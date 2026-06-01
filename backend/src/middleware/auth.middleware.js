@@ -18,6 +18,7 @@ const auth = async (req, res, next) => {
     }
 
     req.user = user;
+    req.schoolId = user.school?._id || user.school || null;
     next();
   } catch (error) {
     logger.error('Auth middleware error', { error: error.message });
@@ -26,6 +27,9 @@ const auth = async (req, res, next) => {
 };
 
 module.exports = { auth };
+
+
+
 
 
 

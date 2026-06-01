@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   getStudents,
+  getGradeOptions,
   createStudent,
   updateStudent,
   deleteStudent,
@@ -15,12 +16,16 @@ const router = express.Router();
 router.use(auth);
 router.use(permitRoles(USER_ROLES.SCHOOL_ADMIN));
 
+router.get('/grades', getGradeOptions);
 router.get('/', getStudents);
 router.post('/', createStudent);
 router.put('/:id', updateStudent);
 router.delete('/:id', deleteStudent);
 
 module.exports = router;
+
+
+
 
 
 

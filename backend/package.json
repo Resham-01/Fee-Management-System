@@ -1,7 +1,7 @@
 {
   "name": "fee-management-backend",
   "version": "1.0.0",
-  "description": "Backend API for Fee Management System",
+  "description": "Backend API for Shulkaa Suvidha",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -24,6 +24,3 @@
     "nodemon": "^3.0.2"
   }
 }
-
-
-

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
+import { useToast, getErrorMessage } from '../context/ToastContext';
 
 const SchoolRegisterPage = () => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     schoolName: '',
     address: '',
@@ -31,11 +33,14 @@ const SchoolRegisterPage = () => {
     try {
       await apiClient.post('/auth/register-school', formData);
       setSuccess('School registered successfully! Waiting for Super Admin approval.');
+      showToast('School registered! Waiting for admin approval.', 'success');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const msg = getErrorMessage(err, 'Registration failed');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -44,7 +49,7 @@ const SchoolRegisterPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 border border-gray-100">
-        <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">Register Your School</h1>
+        <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">Register Your School/College</h1>
         <p className="text-center text-gray-600 mb-8">Create your school account</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

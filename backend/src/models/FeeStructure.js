@@ -10,8 +10,9 @@ const feeStructureSchema = new mongoose.Schema(
     student: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Student',
-      required: true,
     },
+    className: { type: String },
+    section: { type: String },
     monthlyFee: { type: Number, required: true },
     scholarship: { type: Number, default: 0 }, // Scholarship amount (discount)
     scholarshipType: {
@@ -37,7 +38,17 @@ feeStructureSchema.virtual('actualFee').get(function () {
   return this.monthlyFee;
 });
 
+feeStructureSchema.pre('validate', function (next) {
+  if (!this.student && !this.className) {
+    return next(new Error('Either student or className is required'));
+  }
+  next();
+});
+
 module.exports = mongoose.model('FeeStructure', feeStructureSchema);
+
+
+
 
 
 

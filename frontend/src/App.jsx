@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import SchoolRegisterPage from './pages/SchoolRegisterPage';
@@ -21,7 +22,7 @@ const AppContent = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between h-16 items-center">
                 <Link to="/" className="text-xl font-bold text-gray-800">
-                  Fee Management System
+                  Shulkaa Suvidha
                 </Link>
                 <div className="flex gap-4">
                   <Link to="/login" className="text-gray-700 hover:text-gray-900">
@@ -94,7 +95,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 };

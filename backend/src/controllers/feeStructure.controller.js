@@ -3,15 +3,25 @@ const FeeStructure = require('../models/FeeStructure');
 const Student = require('../models/Student');
 const Invoice = require('../models/Invoice');
 const logger = require('../config/logger');
+const { GRADE_OPTIONS } = require('../constants/grades');
 
 const feeStructureSchema = Joi.object({
-  student: Joi.string().required(),
+  student: Joi.string().allow(null, ''),
+  className: Joi.string()
+    .valid(...GRADE_OPTIONS, null, '')
+    .allow(null, ''),
+  section: Joi.string().allow(null, ''),
   monthlyFee: Joi.number().required().min(0),
   scholarship: Joi.number().min(0).default(0),
   scholarshipType: Joi.string().valid('none', 'percentage', 'fixed').default('none'),
   effectiveFrom: Joi.date().required(),
   effectiveTo: Joi.date().allow(null, ''),
   notes: Joi.string().allow(''),
+}).custom((value, helpers) => {
+  if (!value.student && !value.className) {
+    return helpers.message('Either student or class is required');
+  }
+  return value;
 });
 
 // School Admin: Get all fee structures for their school
@@ -44,20 +54,38 @@ exports.createFeeStructure = async (req, res) => {
       return res.status(403).json({ message: 'School admin must be linked to a school' });
     }
 
-    // Verify student belongs to this school
-    const student = await Student.findOne({ _id: value.student, school: req.user.school });
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found in your school' });
+    const normalized = {
+      ...value,
+      student: value.student || null,
+      className: value.className || null,
+      section: value.section || null,
+    };
+
+    if (normalized.student) {
+      const student = await Student.findOne({ _id: normalized.student, school: req.user.school });
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found in your school' });
+      }
     }
 
-    // Deactivate old fee structures for this student
-    await FeeStructure.updateMany(
-      { student: value.student, isActive: true },
-      { isActive: false }
-    );
+    if (normalized.student) {
+      // Deactivate old fee structures for this student
+      await FeeStructure.updateMany({ student: normalized.student, isActive: true }, { isActive: false });
+    } else {
+      // Deactivate old class-wise structure for same class/section
+      await FeeStructure.updateMany(
+        {
+          school: req.user.school,
+          className: normalized.className,
+          section: normalized.section || null,
+          isActive: true,
+        },
+        { isActive: false }
+      );
+    }
 
     const feeStructure = await FeeStructure.create({
-      ...value,
+      ...normalized,
       school: req.user.school,
     });
 
@@ -91,7 +119,21 @@ exports.updateFeeStructure = async (req, res) => {
       return res.status(404).json({ message: 'Fee structure not found' });
     }
 
-    Object.assign(feeStructure, value);
+    const normalized = {
+      ...value,
+      student: value.student || null,
+      className: value.className || null,
+      section: value.section || null,
+    };
+
+    if (normalized.student) {
+      const student = await Student.findOne({ _id: normalized.student, school: req.user.school });
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found in your school' });
+      }
+    }
+
+    Object.assign(feeStructure, normalized);
     await feeStructure.save();
 
     const populated = await FeeStructure.findById(feeStructure._id).populate(
@@ -102,6 +144,29 @@ exports.updateFeeStructure = async (req, res) => {
     res.json(populated);
   } catch (err) {
     logger.error('Update fee structure error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// School Admin: Delete fee structure
+exports.deleteFeeStructure = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.user.school) {
+      return res.status(403).json({ message: 'School admin must be linked to a school' });
+    }
+
+    const feeStructure = await FeeStructure.findOne({ _id: id, school: req.user.school });
+    if (!feeStructure) {
+      return res.status(404).json({ message: 'Fee structure not found' });
+    }
+
+    await FeeStructure.findByIdAndDelete(id);
+
+    res.json({ message: 'Fee structure deleted successfully' });
+  } catch (err) {
+    logger.error('Delete fee structure error', { error: err.message });
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -135,42 +200,55 @@ exports.generateMonthlyInvoices = async (req, res) => {
 
     for (const feeStruct of feeStructures) {
       try {
-        // Check if invoice already exists for this month
-        const existingInvoice = await Invoice.findOne({
-          school: req.user.school,
-          student: feeStruct.student._id,
-          term: term,
-        });
-
-        if (existingInvoice) {
-          errors.push(`Invoice already exists for ${feeStruct.student.firstName} ${feeStruct.student.lastName} - ${term}`);
-          continue;
+        let targetStudents = [];
+        if (feeStruct.student) {
+          targetStudents = [feeStruct.student];
+        } else if (feeStruct.className) {
+          const filters = { school: req.user.school, className: feeStruct.className };
+          if (feeStruct.section) {
+            filters.section = feeStruct.section;
+          }
+          targetStudents = await Student.find(filters);
         }
 
-        // Calculate actual fee
-        let actualFee = feeStruct.monthlyFee;
-        if (feeStruct.scholarshipType === 'percentage') {
-          actualFee = feeStruct.monthlyFee - (feeStruct.monthlyFee * feeStruct.scholarship / 100);
-        } else if (feeStruct.scholarshipType === 'fixed') {
-          actualFee = Math.max(0, feeStruct.monthlyFee - feeStruct.scholarship);
+        for (const targetStudent of targetStudents) {
+          // Check if invoice already exists for this month
+          const existingInvoice = await Invoice.findOne({
+            school: req.user.school,
+            student: targetStudent._id,
+            term: term,
+          });
+
+          if (existingInvoice) {
+            errors.push(`Invoice already exists for ${targetStudent.firstName} ${targetStudent.lastName} - ${term}`);
+            continue;
+          }
+
+          // Calculate actual fee
+          let actualFee = feeStruct.monthlyFee;
+          if (feeStruct.scholarshipType === 'percentage') {
+            actualFee = feeStruct.monthlyFee - (feeStruct.monthlyFee * feeStruct.scholarship / 100);
+          } else if (feeStruct.scholarshipType === 'fixed') {
+            actualFee = Math.max(0, feeStruct.monthlyFee - feeStruct.scholarship);
+          }
+
+          // Create invoice
+          const dueDate = new Date(year, month - 1, 15); // 15th of the month
+          const invoice = await Invoice.create({
+            school: req.user.school,
+            student: targetStudent._id,
+            amount: actualFee,
+            currency: 'NPR',
+            dueDate: dueDate,
+            term: term,
+            description: `Monthly fee for ${term}${feeStruct.scholarship > 0 ? ` (Scholarship: ${feeStruct.scholarshipType === 'percentage' ? feeStruct.scholarship + '%' : 'NPR ' + feeStruct.scholarship})` : ''}`,
+            status: 'pending',
+          });
+
+          createdInvoices.push(invoice);
         }
-
-        // Create invoice
-        const dueDate = new Date(year, month - 1, 15); // 15th of the month
-        const invoice = await Invoice.create({
-          school: req.user.school,
-          student: feeStruct.student._id,
-          amount: actualFee,
-          currency: 'NPR',
-          dueDate: dueDate,
-          term: term,
-          description: `Monthly fee for ${term}${feeStruct.scholarship > 0 ? ` (Scholarship: ${feeStruct.scholarshipType === 'percentage' ? feeStruct.scholarship + '%' : 'NPR ' + feeStruct.scholarship})` : ''}`,
-          status: 'pending',
-        });
-
-        createdInvoices.push(invoice);
       } catch (err) {
-        errors.push(`Failed to create invoice for ${feeStruct.student.firstName}: ${err.message}`);
+        errors.push(`Failed to create invoices for fee structure ${feeStruct._id}: ${err.message}`);
       }
     }
 

@@ -35,6 +35,7 @@ async function seed() {
     // 2. Create a school
     const school = await School.create({
       name: 'Green Valley School',
+      shortName: 'GVS',
       address: 'Kathmandu',
       contactEmail: 'info@greenvalley.edu',
       contactPhone: '+977-123456789',
@@ -73,7 +74,7 @@ async function seed() {
       school: school._id,
       firstName: 'Sita',
       lastName: 'Sharma',
-      studentCode: 'STU-001',
+      studentCode: 'GVS-STU-5-001',
       className: 'Grade 5',
       section: 'A',
       parent: parentUser._id,
@@ -117,6 +118,9 @@ async function seed() {
 }
 
 seed();
+
+
+
 
 
 

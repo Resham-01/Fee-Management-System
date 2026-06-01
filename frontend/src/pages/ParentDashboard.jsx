@@ -3,8 +3,13 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import NotificationPanel from '../components/NotificationPanel';
+import ActionButtons from '../components/ActionButtons';
+import { useConfirm } from '../hooks/useConfirm';
+import { useToast, getErrorMessage } from '../context/ToastContext';
 
 const ParentDashboard = () => {
+  const { confirm, ConfirmDialogElement } = useConfirm();
+  const { showToast } = useToast();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
@@ -40,10 +45,13 @@ const ParentDashboard = () => {
     try {
       await apiClient.post('/parents/link-child', { studentCode });
       setLinkSuccess('Child linked successfully!');
+      showToast('Child linked successfully', 'success');
       setStudentCode('');
       fetchData();
     } catch (err) {
-      setLinkError(err.response?.data?.message || 'Failed to link child');
+      const msg = getErrorMessage(err, 'Failed to link child');
+      setLinkError(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -52,8 +60,30 @@ const ParentDashboard = () => {
       const response = await apiClient.post('/payments/initiate', { invoiceId, gateway });
       // In real implementation, redirect to payment gateway
       window.open(response.data.redirectUrl, '_blank');
+      showToast('Payment initiated', 'info');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to initiate payment');
+      showToast(getErrorMessage(err, 'Failed to initiate payment'), 'error');
+    }
+  };
+
+  const handleRemoveChild = async (studentId) => {
+    const ok = await confirm({
+      title: 'Remove linked child?',
+      message: 'This child will be unlinked from your account. You can link again later using the student code.',
+      confirmLabel: 'Yes, remove',
+    });
+    if (!ok) return;
+    setLinkError('');
+    setLinkSuccess('');
+    try {
+      await apiClient.post('/parents/unlink-child', { studentId });
+      setLinkSuccess('Child removed successfully');
+      showToast('Child removed successfully', 'success');
+      fetchData();
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Failed to remove child');
+      setLinkError(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -121,6 +151,7 @@ const ParentDashboard = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Code</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -132,6 +163,13 @@ const ParentDashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap">{child.studentCode}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{child.className}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{child.section}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <ActionButtons
+                          showEdit={false}
+                          onDelete={() => handleRemoveChild(child._id)}
+                          deleteLabel="Remove"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -249,6 +287,7 @@ const ParentDashboard = () => {
           )}
         </div>
       </div>
+      {ConfirmDialogElement}
     </div>
   );
 };
