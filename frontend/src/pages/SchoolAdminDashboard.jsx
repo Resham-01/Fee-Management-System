@@ -5,8 +5,10 @@ import apiClient from '../api/client';
 import NotificationPanel from '../components/NotificationPanel';
 import ActionButtons from '../components/ActionButtons';
 import { GRADE_OPTIONS } from '../constants/grades';
+import { PAYMENT_ACCOUNT_TYPES, getPaymentTypeLabel } from '../constants/paymentAccounts';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import ReceiptButton from '../components/ReceiptButton';
 
 const SchoolAdminDashboard = () => {
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -54,6 +56,19 @@ const SchoolAdminDashboard = () => {
     description: '',
     status: 'pending',
   });
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [editingPaymentAccount, setEditingPaymentAccount] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    type: 'esewa',
+    merchantId: '',
+    merchantName: '',
+    bankName: '',
+    accountName: '',
+    accountNumber: '',
+    branch: '',
+    notes: '',
+  });
 
   const resetInvoiceForm = () => ({
     student: '',
@@ -68,20 +83,84 @@ const SchoolAdminDashboard = () => {
     fetchData();
   }, []);
 
+  const resetPaymentForm = () => ({
+    type: 'esewa',
+    merchantId: '',
+    merchantName: '',
+    bankName: '',
+    accountName: '',
+    accountNumber: '',
+    branch: '',
+    notes: '',
+  });
+
   const fetchData = async () => {
     try {
-      const [studentsRes, invoicesRes, feeStructuresRes] = await Promise.all([
+      const [studentsRes, invoicesRes, feeStructuresRes, paymentAccountsRes] = await Promise.all([
         apiClient.get('/students'),
         apiClient.get('/invoices/school'),
         apiClient.get('/fee-structures'),
+        apiClient.get('/payment-accounts/my-school'),
       ]);
       setStudents(studentsRes.data);
       setInvoices(invoicesRes.data);
       setFeeStructures(feeStructuresRes.data);
+      setPaymentAccounts(paymentAccountsRes.data);
     } catch (err) {
       console.error('Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePaymentAccountSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const isEditing = !!editingPaymentAccount;
+      if (isEditing) {
+        await apiClient.put(`/payment-accounts/my-school/${editingPaymentAccount._id}`, paymentForm);
+        showToast('Payment account updated. Waiting for Super Admin approval.', 'success');
+      } else {
+        await apiClient.post('/payment-accounts/my-school', paymentForm);
+        showToast('Payment account submitted for Super Admin approval.', 'success');
+      }
+      setShowPaymentForm(false);
+      setEditingPaymentAccount(null);
+      setPaymentForm(resetPaymentForm());
+      fetchData();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to save payment account'), 'error');
+    }
+  };
+
+  const handleEditPaymentAccount = (account) => {
+    setEditingPaymentAccount(account);
+    setPaymentForm({
+      type: account.type,
+      merchantId: account.merchantId || '',
+      merchantName: account.merchantName || '',
+      bankName: account.bankName || '',
+      accountName: account.accountName || '',
+      accountNumber: account.accountNumber || '',
+      branch: account.branch || '',
+      notes: account.notes || '',
+    });
+    setShowPaymentForm(true);
+  };
+
+  const handleDeletePaymentAccount = async (accountId) => {
+    const ok = await confirm({
+      title: 'Delete payment account?',
+      message: 'This payment account submission will be removed.',
+      confirmLabel: 'Yes, delete',
+    });
+    if (!ok) return;
+    try {
+      await apiClient.delete(`/payment-accounts/my-school/${accountId}`);
+      showToast('Payment account deleted', 'success');
+      fetchData();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete payment account'), 'error');
     }
   };
 
@@ -348,6 +427,208 @@ const SchoolAdminDashboard = () => {
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-gray-600 text-sm">Total Paid</h3>
             <p className="text-3xl font-bold text-green-600">NPR {totalPaid.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Payment Accounts Section */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="p-6 border-b flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">Payment Accounts</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Submit your school&apos;s payment details. Super Admin will verify before parents can pay fees.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowPaymentForm(true);
+                setEditingPaymentAccount(null);
+                setPaymentForm(resetPaymentForm());
+              }}
+              className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
+            >
+              Add Payment Account
+            </button>
+          </div>
+
+          {showPaymentForm && (
+            <div className="p-6 border-b bg-gradient-to-br from-teal-50 to-green-50">
+              <form onSubmit={handlePaymentAccountSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
+                  <select
+                    value={paymentForm.type}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, type: e.target.value })}
+                    required
+                    disabled={!!editingPaymentAccount}
+                    className="w-full px-4 py-2 border rounded-lg bg-white"
+                  >
+                    {PAYMENT_ACCOUNT_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {paymentForm.type === 'bank_transfer' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                      <input
+                        type="text"
+                        value={paymentForm.bankName}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, bankName: e.target.value })}
+                        required
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                      <input
+                        type="text"
+                        value={paymentForm.accountName}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, accountName: e.target.value })}
+                        required
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                      <input
+                        type="text"
+                        value={paymentForm.accountNumber}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })}
+                        required
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                      <input
+                        type="text"
+                        value={paymentForm.branch}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, branch: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Merchant ID / Number</label>
+                      <input
+                        type="text"
+                        value={paymentForm.merchantId}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, merchantId: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                        placeholder="e.g. 98XXXXXXXX"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Merchant / Account Name</label>
+                      <input
+                        type="text"
+                        value={paymentForm.merchantName}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, merchantName: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                        placeholder="School name on wallet"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                  <input
+                    type="text"
+                    value={paymentForm.notes}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    placeholder="Any instructions for parents"
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-2">
+                  <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    {editingPaymentAccount ? 'Update & Resubmit' : 'Submit for Approval'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPaymentForm(false);
+                      setEditingPaymentAccount(null);
+                    }}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paymentAccounts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                      No payment accounts submitted yet. Add your school&apos;s eSewa, Khalti, FonePay, or bank details.
+                    </td>
+                  </tr>
+                ) : (
+                  paymentAccounts.map((account) => (
+                    <tr key={account._id}>
+                      <td className="px-6 py-4 whitespace-nowrap font-medium">
+                        {getPaymentTypeLabel(account.type)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {account.type === 'bank_transfer' ? (
+                          <span className="text-sm text-gray-700">
+                            {account.bankName} — {account.accountName} ({account.accountNumber})
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-700">
+                            {account.merchantName || account.merchantId || '—'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {account.isVerified && account.isActive ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Verified & Active
+                          </span>
+                        ) : account.rejectionReason ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Rejected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Pending Approval
+                          </span>
+                        )}
+                        {account.rejectionReason && (
+                          <p className="text-xs text-red-600 mt-1">{account.rejectionReason}</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <ActionButtons
+                          onEdit={() => handleEditPaymentAccount(account)}
+                          onDelete={!account.isVerified ? () => handleDeletePaymentAccount(account._id) : undefined}
+                          showDelete={!account.isVerified}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -954,10 +1235,15 @@ const SchoolAdminDashboard = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <ActionButtons
-                          onEdit={() => handleEditInvoice(invoice)}
-                          onDelete={() => handleDeleteInvoice(invoice._id)}
-                        />
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <ActionButtons
+                            onEdit={() => handleEditInvoice(invoice)}
+                            onDelete={() => handleDeleteInvoice(invoice._id)}
+                          />
+                          {invoice.status === 'paid' && (
+                            <ReceiptButton invoiceId={invoice._id} showToast={showToast} />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

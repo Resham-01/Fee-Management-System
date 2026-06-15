@@ -6,6 +6,8 @@ import NotificationPanel from '../components/NotificationPanel';
 import ActionButtons from '../components/ActionButtons';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import ReceiptButton from '../components/ReceiptButton';
+import { getPaymentTypeLabel } from '../constants/paymentAccounts';
 
 const emptyPlanForm = () => ({
   name: '',
@@ -22,6 +24,7 @@ const SuperAdminDashboard = () => {
   const { showToast } = useToast();
   const [schools, setSchools] = useState([]);
   const [plans, setPlans] = useState([]);
+  const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
@@ -33,12 +36,14 @@ const SuperAdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [schoolsRes, plansRes] = await Promise.all([
+      const [schoolsRes, plansRes, receiptsRes] = await Promise.all([
         apiClient.get('/schools'),
         apiClient.get('/plans'),
+        apiClient.get('/receipts'),
       ]);
       setSchools(schoolsRes.data);
       setPlans(plansRes.data);
+      setReceipts(receiptsRes.data);
     } catch (err) {
       console.error('Failed to fetch data');
     } finally {
@@ -241,6 +246,64 @@ const SuperAdminDashboard = () => {
                             Reject
                           </button>
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold text-gray-800">Payment Receipts</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Download official receipts for all successful fee payments across schools.
+            </p>
+          </div>
+          {loading ? (
+            <div className="p-6 text-center">Loading...</div>
+          ) : receipts.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">No payment receipts yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receipt No.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">School</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Term</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid On</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {receipts.map((receipt) => (
+                    <tr key={receipt.invoiceId} className="hover:bg-slate-50/80">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{receipt.receiptNumber}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">{receipt.schoolName}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {receipt.studentName}
+                        {receipt.studentCode && (
+                          <span className="text-gray-500 block text-xs">{receipt.studentCode}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">{receipt.term}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {receipt.currency} {receipt.amount.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {receipt.gateway ? getPaymentTypeLabel(receipt.gateway) : 'Manual'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {new Date(receipt.paidAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <ReceiptButton invoiceId={receipt.invoiceId} showToast={showToast} />
                       </td>
                     </tr>
                   ))}

@@ -6,6 +6,9 @@ import NotificationPanel from '../components/NotificationPanel';
 import ActionButtons from '../components/ActionButtons';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import { getPaymentTypeLabel, GATEWAY_TYPES } from '../constants/paymentAccounts';
+import WalletPaymentModal from '../components/WalletPaymentModal';
+import ReceiptButton from '../components/ReceiptButton';
 
 const ParentDashboard = () => {
   const { confirm, ConfirmDialogElement } = useConfirm();
@@ -14,10 +17,12 @@ const ParentDashboard = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [children, setChildren] = useState([]);
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [studentCode, setStudentCode] = useState('');
   const [linkError, setLinkError] = useState('');
   const [linkSuccess, setLinkSuccess] = useState('');
+  const [payingInvoice, setPayingInvoice] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -25,12 +30,14 @@ const ParentDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [invoicesRes, childrenRes] = await Promise.all([
+      const [invoicesRes, childrenRes, paymentAccountsRes] = await Promise.all([
         apiClient.get('/invoices/parent'),
         apiClient.get('/parents/children'),
+        apiClient.get('/payment-accounts/parent'),
       ]);
       setInvoices(invoicesRes.data);
       setChildren(childrenRes.data);
+      setPaymentAccounts(paymentAccountsRes.data);
     } catch (err) {
       console.error('Failed to fetch data');
     } finally {
@@ -55,17 +62,6 @@ const ParentDashboard = () => {
     }
   };
 
-  const handlePayment = async (invoiceId, gateway) => {
-    try {
-      const response = await apiClient.post('/payments/initiate', { invoiceId, gateway });
-      // In real implementation, redirect to payment gateway
-      window.open(response.data.redirectUrl, '_blank');
-      showToast('Payment initiated', 'info');
-    } catch (err) {
-      showToast(getErrorMessage(err, 'Failed to initiate payment'), 'error');
-    }
-  };
-
   const handleRemoveChild = async (studentId) => {
     const ok = await confirm({
       title: 'Remove linked child?',
@@ -86,6 +82,12 @@ const ParentDashboard = () => {
       showToast(msg, 'error');
     }
   };
+
+  const availableGateways = paymentAccounts
+    .filter((a) => GATEWAY_TYPES.includes(a.type))
+    .map((a) => a.type);
+
+  const bankAccounts = paymentAccounts.filter((a) => a.type === 'bank_transfer');
 
   const totalPending = invoices.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + inv.amount, 0);
   const totalPaid = invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0);
@@ -131,6 +133,45 @@ const ParentDashboard = () => {
             <h3 className="text-gray-600 text-sm">Total Paid</h3>
             <p className="text-3xl font-bold text-green-600">NPR {totalPaid.toLocaleString()}</p>
           </div>
+        </div>
+
+        {/* School Payment Accounts */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold text-gray-800">School Payment Accounts</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Pay fees only to your child&apos;s school accounts below. Each school has its own separate payment details.
+            </p>
+          </div>
+          {loading ? (
+            <div className="p-6 text-center">Loading...</div>
+          ) : paymentAccounts.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              No payment accounts are available yet. The school admin must submit details and Super Admin must verify them.
+            </div>
+          ) : (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {paymentAccounts.map((account) => (
+                <div key={account._id} className="border rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-gray-800 mb-2">{getPaymentTypeLabel(account.type)}</h3>
+                  {account.type === 'bank_transfer' ? (
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <p><span className="text-gray-500">Bank:</span> {account.bankName}</p>
+                      <p><span className="text-gray-500">Account Name:</span> {account.accountName}</p>
+                      <p><span className="text-gray-500">Account No:</span> {account.accountNumber}</p>
+                      {account.branch && <p><span className="text-gray-500">Branch:</span> {account.branch}</p>}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <p><span className="text-gray-500">Merchant:</span> {account.merchantName || '—'}</p>
+                      <p><span className="text-gray-500">ID:</span> {account.merchantId || '—'}</p>
+                    </div>
+                  )}
+                  {account.notes && <p className="text-xs text-gray-500 mt-2">{account.notes}</p>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Linked Children */}
@@ -256,28 +297,26 @@ const ParentDashboard = () => {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {invoice.status === 'pending' && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handlePayment(invoice._id, 'esewa')}
-                              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                            >
-                              Pay eSewa
-                            </button>
-                            <button
-                              onClick={() => handlePayment(invoice._id, 'khalti')}
-                              className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
-                            >
-                              Pay Khalti
-                            </button>
-                            <button
-                              onClick={() => handlePayment(invoice._id, 'fonepay')}
-                              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                            >
-                              Pay FonePay
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {(invoice.status === 'pending' || invoice.status === 'overdue') &&
+                            (availableGateways.length > 0 ? (
+                              <button
+                                onClick={() => setPayingInvoice(invoice)}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
+                              >
+                                Pay with Wallet
+                              </button>
+                            ) : (
+                              <span className="text-sm text-gray-500">
+                                {bankAccounts.length > 0
+                                  ? 'Use bank transfer details above'
+                                  : 'No payment methods available'}
+                              </span>
+                            ))}
+                          {invoice.status === 'paid' && (
+                            <ReceiptButton invoiceId={invoice._id} showToast={showToast} />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -288,9 +327,17 @@ const ParentDashboard = () => {
         </div>
       </div>
       {ConfirmDialogElement}
+      {payingInvoice && (
+        <WalletPaymentModal
+          invoice={payingInvoice}
+          availableGateways={availableGateways}
+          onClose={() => setPayingInvoice(null)}
+          onSuccess={fetchData}
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 };
 
 export default ParentDashboard;
-

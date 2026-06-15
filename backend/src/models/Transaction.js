@@ -7,6 +7,16 @@ const transactionSchema = new mongoose.Schema(
       ref: 'Invoice',
       required: true,
     },
+    school: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'School',
+      required: true,
+    },
+    paymentAccount: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PaymentAccount',
+      required: true,
+    },
     amount: { type: Number, required: true },
     gateway: {
       type: String,
@@ -15,9 +25,13 @@ const transactionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['initiated', 'success', 'failed'],
+      enum: ['initiated', 'otp_pending', 'success', 'failed'],
       default: 'initiated',
     },
+    walletPhone: { type: String },
+    otpHash: { type: String },
+    otpExpiresAt: { type: Date },
+    otpAttempts: { type: Number, default: 0 },
     gatewayRefId: { type: String },
     rawResponse: { type: mongoose.Schema.Types.Mixed },
   },

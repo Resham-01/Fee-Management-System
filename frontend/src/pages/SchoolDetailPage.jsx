@@ -6,6 +6,8 @@ import NotificationPanel from '../components/NotificationPanel';
 import ActionButtons from '../components/ActionButtons';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import { getPaymentTypeLabel } from '../constants/paymentAccounts';
+import ReceiptButton from '../components/ReceiptButton';
 
 const SchoolDetailPage = () => {
   const { id } = useParams();
@@ -26,6 +28,7 @@ const SchoolDetailPage = () => {
     description: '',
     status: 'pending',
   });
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
 
   useEffect(() => {
     fetchSchoolDetails();
@@ -33,13 +36,49 @@ const SchoolDetailPage = () => {
 
   const fetchSchoolDetails = async () => {
     try {
-      const response = await apiClient.get(`/schools/${id}/details`);
-      setData(response.data);
+      const [detailsRes, paymentAccountsRes] = await Promise.all([
+        apiClient.get(`/schools/${id}/details`),
+        apiClient.get(`/payment-accounts/school/${id}`),
+      ]);
+      setData(detailsRes.data);
+      setPaymentAccounts(paymentAccountsRes.data);
     } catch (err) {
       console.error('Failed to fetch school details');
       showToast('Failed to load school details', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyPaymentAccount = async (accountId) => {
+    try {
+      await apiClient.patch(`/payment-accounts/${accountId}/verify`);
+      showToast('Payment account verified and activated for parents', 'success');
+      fetchSchoolDetails();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to verify payment account'), 'error');
+    }
+  };
+
+  const handleRejectPaymentAccount = async (accountId) => {
+    const reason = window.prompt('Rejection reason (optional):');
+    if (reason === null) return;
+    try {
+      await apiClient.patch(`/payment-accounts/${accountId}/reject`, { rejectionReason: reason });
+      showToast('Payment account rejected', 'success');
+      fetchSchoolDetails();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to reject payment account'), 'error');
+    }
+  };
+
+  const handleTogglePaymentAccount = async (accountId, isActive) => {
+    try {
+      await apiClient.patch(`/payment-accounts/${accountId}/toggle-active`, { isActive });
+      showToast(isActive ? 'Payment account activated' : 'Payment account deactivated', 'success');
+      fetchSchoolDetails();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to update payment account'), 'error');
     }
   };
 
@@ -274,6 +313,107 @@ const SchoolDetailPage = () => {
           </div>
         )}
 
+        {/* Payment Accounts Management */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold text-gray-800">Payment Accounts</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Review and manage this school&apos;s individual payment accounts. Parents only see verified accounts.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paymentAccounts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                      No payment accounts submitted by this school yet.
+                    </td>
+                  </tr>
+                ) : (
+                  paymentAccounts.map((account) => (
+                    <tr key={account._id}>
+                      <td className="px-6 py-4 whitespace-nowrap font-medium">
+                        {getPaymentTypeLabel(account.type)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {account.type === 'bank_transfer' ? (
+                          <div className="text-sm text-gray-700">
+                            <p>{account.bankName} — {account.accountName}</p>
+                            <p className="text-gray-500">{account.accountNumber} {account.branch && `(${account.branch})`}</p>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-700">
+                            <p>{account.merchantName || '—'}</p>
+                            <p className="text-gray-500">ID: {account.merchantId || '—'}</p>
+                          </div>
+                        )}
+                        {account.notes && <p className="text-xs text-gray-500 mt-1">{account.notes}</p>}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {account.isVerified && account.isActive ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Verified & Active
+                          </span>
+                        ) : account.rejectionReason ? (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Rejected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Pending Approval
+                          </span>
+                        )}
+                        {account.rejectionReason && (
+                          <p className="text-xs text-red-600 mt-1">{account.rejectionReason}</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-wrap gap-2">
+                          {!account.isVerified && (
+                            <button
+                              onClick={() => handleVerifyPaymentAccount(account._id)}
+                              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                            >
+                              Verify
+                            </button>
+                          )}
+                          {!account.isVerified && (
+                            <button
+                              onClick={() => handleRejectPaymentAccount(account._id)}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                            >
+                              Reject
+                            </button>
+                          )}
+                          {account.isVerified && (
+                            <button
+                              onClick={() => handleTogglePaymentAccount(account._id, !account.isActive)}
+                              className={`px-3 py-1 rounded text-sm text-white ${
+                                account.isActive ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'
+                              }`}
+                            >
+                              {account.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Students Table */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="p-6 border-b">
@@ -451,10 +591,15 @@ const SchoolDetailPage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <ActionButtons
-                        onEdit={() => handleEditInvoice(invoice)}
-                        onDelete={() => handleDeleteInvoice(invoice._id)}
-                      />
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <ActionButtons
+                          onEdit={() => handleEditInvoice(invoice)}
+                          onDelete={() => handleDeleteInvoice(invoice._id)}
+                        />
+                        {invoice.status === 'paid' && (
+                          <ReceiptButton invoiceId={invoice._id} showToast={showToast} />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

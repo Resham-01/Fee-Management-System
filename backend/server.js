@@ -17,6 +17,8 @@ const invoiceRoutes = require('./src/routes/invoice.routes');
 const paymentRoutes = require('./src/routes/payment.routes');
 const planRoutes = require('./src/routes/plan.routes');
 const feeStructureRoutes = require('./src/routes/feeStructure.routes');
+const paymentAccountRoutes = require('./src/routes/paymentAccount.routes');
+const receiptRoutes = require('./src/routes/receipt.routes');
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/fee-structures', feeStructureRoutes);
+app.use('/api/payment-accounts', paymentAccountRoutes);
+app.use('/api/receipts', receiptRoutes);
 
 // Error handling
 app.use(notFoundHandler);
