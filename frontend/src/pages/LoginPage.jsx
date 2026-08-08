@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import PasswordInput from '../components/PasswordInput';
@@ -69,33 +69,30 @@ const LoginPage = () => {
           <button
             type="button"
             onClick={() => setSelectedRole('parent')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-              selectedRole === 'parent'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-            }`}
+            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${selectedRole === 'parent'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
+              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
+              }`}
           >
             Parent
           </button>
           <button
             type="button"
             onClick={() => setSelectedRole('school_admin')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-              selectedRole === 'school_admin'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-            }`}
+            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${selectedRole === 'school_admin'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
+              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
+              }`}
           >
             School Admin
           </button>
           <button
             type="button"
             onClick={() => setSelectedRole('super_admin')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-              selectedRole === 'super_admin'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-            }`}
+            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${selectedRole === 'super_admin'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
+              : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
+              }`}
           >
             Super Admin
           </button>
@@ -115,12 +112,23 @@ const LoginPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">Password</label>
+            </div>
             <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
             />
+
+          </div>
+          <div className="text-end">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-indigo-600 font-medium hover:text-indigo-800 hover:underline transition-colors"
+            >
+              Forgot password
+            </Link>
           </div>
 
           {error && (

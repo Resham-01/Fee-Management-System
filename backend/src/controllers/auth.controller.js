@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const Joi = require('joi');
 const { User, USER_ROLES } = require('../models/User');
 const School = require('../models/School');
 const logger = require('../config/logger');
 const { deriveShortName } = require('../utils/schoolShortName');
+const { sendPasswordResetEmail } = require('../utils/email');
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -31,6 +33,22 @@ const changePasswordSchema = Joi.object({
   oldPassword: Joi.string().required(),
   newPassword: Joi.string().min(6).required(),
 });
+
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string().required(),
+  newPassword: Joi.string().min(6).required(),
+});
+
+const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const getResetUrl = (token) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return `${frontendUrl.replace(/\/$/, '')}/reset-password/${token}`;
+};
 
 const generateToken = (userId, role, schoolId) => {
   return jwt.sign({ id: userId, role, school: schoolId }, process.env.JWT_SECRET, {
@@ -190,6 +208,71 @@ exports.changePassword = async (req, res) => {
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
     logger.error('Change password error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { error, value } = forgotPasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { email } = value;
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (user && user.isActive) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      user.resetPasswordToken = hashResetToken(resetToken);
+      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+      await user.save({ validateBeforeSave: false });
+
+      const resetUrl = getResetUrl(resetToken);
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+      });
+    }
+
+    res.json({
+      message:
+        'If an account with that email exists, password reset instructions have been sent.',
+    });
+  } catch (err) {
+    logger.error('Forgot password error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { error, value } = resetPasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { token, newPassword } = value;
+    const hashedToken = hashResetToken(token);
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset link' });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
+  } catch (err) {
+    logger.error('Reset password error', { error: err.message });
     res.status(500).json({ message: 'Server error' });
   }
 };

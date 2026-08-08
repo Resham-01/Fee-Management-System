@@ -10,6 +10,8 @@ import SchoolAdminDashboard from './pages/SchoolAdminDashboard';
 import ParentDashboard from './pages/ParentDashboard';
 import SchoolDetailPage from './pages/SchoolDetailPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 const AppContent = () => {
   const { user } = useAuth();
@@ -42,6 +44,8 @@ const AppContent = () => {
 
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/register-school" element={<SchoolRegisterPage />} />
           <Route path="/register-parent" element={<ParentRegisterPage />} />
           <Route
