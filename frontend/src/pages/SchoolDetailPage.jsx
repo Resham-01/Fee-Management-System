@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
-import NotificationPanel from '../components/NotificationPanel';
+import AppLayout from '../components/layout/AppLayout';
 import ActionButtons from '../components/ActionButtons';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast, getErrorMessage } from '../context/ToastContext';
 import { getPaymentTypeLabel } from '../constants/paymentAccounts';
 import ReceiptButton from '../components/ReceiptButton';
+import Icon from '../components/ui/icons';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import StatCard from '../components/ui/StatCard';
+import StatusBadge from '../components/ui/StatusBadge';
+import Badge from '../components/ui/Badge';
+import PageHeader from '../components/ui/PageHeader';
+import Input, { Field } from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Modal from '../components/ui/Modal';
+import EmptyState from '../components/ui/EmptyState';
+import Spinner from '../components/ui/Spinner';
+import { TableSkeleton } from '../components/ui/Skeleton';
+
+const scrollToId = (id) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 const SchoolDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { logout } = useAuth();
   const { confirm, ConfirmDialogElement } = useConfirm();
   const { showToast } = useToast();
   const [data, setData] = useState(null);
@@ -184,434 +199,384 @@ const SchoolDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+        <Spinner label="Loading school details…" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg text-red-600">School not found</div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Card className="p-10 text-center">
+          <Icon.warning className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+          <p className="text-slate-700 font-medium">School not found</p>
+          <Button className="mt-4" onClick={() => navigate('/super-admin')}>
+            Back to Schools
+          </Button>
+        </Card>
       </div>
     );
   }
 
   const { school, students, invoices, statistics } = data;
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/super-admin')}
-                className="text-blue-600 hover:underline"
-              >
-                ← Back to Schools
-              </button>
-              <h1 className="text-xl font-bold text-gray-800">{school.name}</h1>
-            </div>
-            <div className="flex gap-4 items-center">
-              <NotificationPanel />
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+  const navItems = [
+    { label: 'Back to Schools', icon: <Icon.arrowLeft />, path: '/super-admin' },
+    { label: 'School Info', icon: <Icon.building />, onClick: () => scrollToId('info') },
+    { label: 'Payment Accounts', icon: <Icon.wallet />, onClick: () => scrollToId('accounts') },
+    { label: 'Students', icon: <Icon.users />, onClick: () => scrollToId('students') },
+    { label: 'Invoices', icon: <Icon.receipt />, onClick: () => scrollToId('invoices') },
+    { label: 'Change Password', icon: <Icon.lock />, path: '/change-password' },
+  ];
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* School Info */}
-        <div className="bg-white rounded-lg shadow mb-8 p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">School Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Name</p>
-              <p className="font-medium">{school.name}</p>
+  return (
+    <AppLayout
+      navItems={navItems}
+      title={school.name}
+      subtitle={school.address}
+    >
+      <div className="space-y-8">
+        <PageHeader
+          title={school.name}
+          description={school.address}
+          icon={<Icon.building />}
+          actions={
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => navigate('/super-admin')} icon={<Icon.arrowLeft className="w-4 h-4" />}>
+                Back
+              </Button>
+              <Button variant="secondary" onClick={fetchSchoolDetails} icon={<Icon.refresh className="w-4 h-4" />}>
+                Refresh
+              </Button>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Address</p>
-              <p className="font-medium">{school.address}</p>
+          }
+        />
+
+        {/* School info */}
+        <section id="info" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex items-center justify-between gap-4">
+              <h2 className="text-base font-bold font-display text-slate-900">School Information</h2>
+              <StatusBadge status={school.isApproved ? 'approved' : 'pending'} />
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Contact Email</p>
-              <p className="font-medium">{school.contactEmail}</p>
+            <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Contact Email</p>
+                <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                  <Icon.mail className="w-4 h-4 text-slate-400" /> {school.contactEmail}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Contact Phone</p>
+                <p className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+                  <Icon.phone className="w-4 h-4 text-slate-400" /> {school.contactPhone}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Address</p>
+                <p className="text-sm font-medium text-slate-800">{school.address}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Status</p>
+                <StatusBadge status={school.isApproved ? 'approved' : 'pending'} />
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Contact Phone</p>
-              <p className="font-medium">{school.contactPhone}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Status</p>
-              {school.isApproved ? (
-                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                  Approved
-                </span>
-              ) : (
-                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                  Pending
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+          </Card>
+        </section>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Total Students</h3>
-            <p className="text-3xl font-bold text-gray-800">{statistics.totalStudents}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Total Fees</h3>
-            <p className="text-3xl font-bold text-blue-600">NPR {statistics.totalAmount.toLocaleString()}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Paid</h3>
-            <p className="text-3xl font-bold text-green-600">NPR {statistics.paidAmount.toLocaleString()}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Remaining</h3>
-            <p className="text-3xl font-bold text-red-600">NPR {statistics.remainingAmount.toLocaleString()}</p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Total Students" value={statistics.totalStudents} tone="brand" icon={<Icon.users />} />
+          <StatCard label="Total Fees" value={`NPR ${statistics.totalAmount.toLocaleString()}`} tone="brand" icon={<Icon.money />} />
+          <StatCard label="Collected" value={`NPR ${statistics.paidAmount.toLocaleString()}`} tone="emerald" icon={<Icon.check />} />
+          <StatCard label="Remaining" value={`NPR ${statistics.remainingAmount.toLocaleString()}`} tone="rose" icon={<Icon.clock />} />
         </div>
 
-        {/* Notification Actions */}
+        {/* Notification actions */}
         {statistics.remainingAmount > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-bold text-yellow-800 mb-4">Pending Fee Notifications</h3>
-            <div className="flex gap-4">
-              <button
-                onClick={handleNotifyParents}
-                disabled={notifying}
-                className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 disabled:opacity-50"
-              >
-                {notifying ? 'Sending...' : 'Notify All Parents'}
-              </button>
-              <button
-                onClick={handleNotifySchool}
-                disabled={notifying}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {notifying ? 'Sending...' : 'Notify School Admin'}
-              </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 sm:px-6 py-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+            <div>
+              <h3 className="text-sm font-bold font-display text-amber-900 flex items-center gap-2">
+                <Icon.warning className="w-4 h-4 text-amber-600" />
+                Pending Fee Notifications
+              </h3>
+              <p className="mt-1 text-xs text-amber-700">
+                Pending: NPR {statistics.pendingAmount.toLocaleString()} · Overdue: NPR {statistics.overdueAmount.toLocaleString()}
+              </p>
             </div>
-            <p className="text-sm text-yellow-700 mt-2">
-              Pending Amount: NPR {statistics.pendingAmount.toLocaleString()} | Overdue: NPR{' '}
-              {statistics.overdueAmount.toLocaleString()}
-            </p>
+            <div className="flex gap-2 flex-shrink-0">
+              <Button onClick={handleNotifyParents} loading={notifying} variant="secondary" icon={<Icon.bell className="w-4 h-4" />}>
+                Notify All Parents
+              </Button>
+              <Button onClick={handleNotifySchool} loading={notifying} icon={<Icon.mail className="w-4 h-4" />}>
+                Notify School Admin
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Payment Accounts Management */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-bold text-gray-800">Payment Accounts</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Review and manage this school&apos;s individual payment accounts. Parents only see verified accounts.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {paymentAccounts.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                      No payment accounts submitted by this school yet.
-                    </td>
-                  </tr>
-                ) : (
-                  paymentAccounts.map((account) => (
-                    <tr key={account._id}>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium">
-                        {getPaymentTypeLabel(account.type)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {account.type === 'bank_transfer' ? (
-                          <div className="text-sm text-gray-700">
-                            <p>{account.bankName} — {account.accountName}</p>
-                            <p className="text-gray-500">{account.accountNumber} {account.branch && `(${account.branch})`}</p>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-700">
-                            <p>{account.merchantName || '—'}</p>
-                            <p className="text-gray-500">ID: {account.merchantId || '—'}</p>
-                          </div>
-                        )}
-                        {account.notes && <p className="text-xs text-gray-500 mt-1">{account.notes}</p>}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {account.isVerified && account.isActive ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            Verified & Active
-                          </span>
-                        ) : account.rejectionReason ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                            Rejected
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pending Approval
-                          </span>
-                        )}
-                        {account.rejectionReason && (
-                          <p className="text-xs text-red-600 mt-1">{account.rejectionReason}</p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-2">
-                          {!account.isVerified && (
-                            <button
-                              onClick={() => handleVerifyPaymentAccount(account._id)}
-                              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                            >
-                              Verify
-                            </button>
-                          )}
-                          {!account.isVerified && (
-                            <button
-                              onClick={() => handleRejectPaymentAccount(account._id)}
-                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                            >
-                              Reject
-                            </button>
-                          )}
-                          {account.isVerified && (
-                            <button
-                              onClick={() => handleTogglePaymentAccount(account._id, !account.isActive)}
-                              className={`px-3 py-1 rounded text-sm text-white ${
-                                account.isActive ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'
-                              }`}
-                            >
-                              {account.isActive ? 'Deactivate' : 'Activate'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Students Table */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-bold text-gray-800">Students ({students.length})</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {students.map((student) => (
-                  <tr key={student._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {student.firstName} {student.lastName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{student.studentCode}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{student.className}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{student.section}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Invoices Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800">Invoices ({invoices.length})</h2>
-            <button
-              onClick={() => {
-                setShowInvoiceForm(true);
-                setEditingInvoice(null);
-                setInvoiceForm(resetInvoiceForm());
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md"
-            >
-              Add Invoice
-            </button>
-          </div>
-
-          {showInvoiceForm && (
-            <div className="p-6 border-b bg-gradient-to-br from-slate-50 to-blue-50">
-              <form onSubmit={handleInvoiceSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-                  <select
-                    value={invoiceForm.student}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, student: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="">Select student</option>
-                    {students.map((student) => (
-                      <option key={student._id} value={student._id}>
-                        {student.firstName} {student.lastName} ({student.studentCode})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (NPR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={invoiceForm.amount}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-                  <input
-                    type="text"
-                    value={invoiceForm.term}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, term: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    value={invoiceForm.dueDate}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={invoiceForm.status}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="overdue">Overdue</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={invoiceForm.description}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div className="md:col-span-2 flex gap-2">
-                  <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
-                    {editingInvoice ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowInvoiceForm(false)}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+        {/* Payment Accounts */}
+        <section id="accounts" className="scroll-mt-20">
+          <Card>
+            <div className="card-header">
+              <h2 className="text-base font-bold font-display text-slate-900">Payment Accounts</h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Review and manage this school&apos;s payment accounts. Parents only see verified accounts.
+              </p>
             </div>
-          )}
+            {paymentAccounts.length === 0 ? (
+              <EmptyState
+                icon={<Icon.wallet />}
+                title="No payment accounts submitted"
+                description="This school hasn't submitted any payment details yet."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Type', 'Details', 'Status', 'Actions'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paymentAccounts.map((account) => (
+                      <tr key={account._id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                          {getPaymentTypeLabel(account.type)}
+                        </td>
+                        <td className="px-6 py-4">
+                          {account.type === 'bank_transfer' ? (
+                            <div className="text-sm text-slate-600">
+                              <p>{account.bankName} — {account.accountName}</p>
+                              <p className="text-slate-400">{account.accountNumber} {account.branch && `(${account.branch})`}</p>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-slate-600">
+                              <p>{account.merchantName || '—'}</p>
+                              <p className="text-slate-400">ID: {account.merchantId || '—'}</p>
+                            </div>
+                          )}
+                          {account.notes && <p className="text-xs text-slate-400 mt-1">{account.notes}</p>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {account.isVerified && account.isActive ? (
+                            <StatusBadge status="verified_active" />
+                          ) : account.rejectionReason ? (
+                            <StatusBadge status="rejected" />
+                          ) : (
+                            <StatusBadge status="pending approval" />
+                          )}
+                          {account.rejectionReason && (
+                            <p className="text-xs text-rose-600 mt-1 max-w-[180px]">{account.rejectionReason}</p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-2">
+                            {!account.isVerified && (
+                              <button
+                                onClick={() => handleVerifyPaymentAccount(account._id)}
+                                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 shadow-sm transition"
+                              >
+                                Verify
+                              </button>
+                            )}
+                            {!account.isVerified && (
+                              <button
+                                onClick={() => handleRejectPaymentAccount(account._id)}
+                                className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 shadow-sm transition"
+                              >
+                                Reject
+                              </button>
+                            )}
+                            {account.isVerified && (
+                              <button
+                                onClick={() => handleTogglePaymentAccount(account._id, !account.isActive)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition ${
+                                  account.isActive ? 'bg-slate-600 text-white hover:bg-slate-700' : 'bg-blue-600 text-white hover:bg-blue-700'
+                                }`}
+                              >
+                                {account.isActive ? 'Deactivate' : 'Activate'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Term</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {invoices.map((invoice) => (
-                  <tr key={invoice._id} className="hover:bg-slate-50/80">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {invoice.student?.firstName} {invoice.student?.lastName} ({invoice.student?.studentCode})
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{invoice.term}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">NPR {invoice.amount.toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {new Date(invoice.dueDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {invoice.status === 'paid' ? (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                          Paid
-                        </span>
-                      ) : invoice.status === 'overdue' ? (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                          Overdue
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          Pending
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <ActionButtons
-                          onEdit={() => handleEditInvoice(invoice)}
-                          onDelete={() => handleDeleteInvoice(invoice._id)}
-                        />
-                        {invoice.status === 'paid' && (
-                          <ReceiptButton invoiceId={invoice._id} showToast={showToast} />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Students */}
+        <section id="students" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex items-center justify-between gap-4">
+              <h2 className="text-base font-bold font-display text-slate-900">Students</h2>
+              <Badge tone="indigo">{students.length}</Badge>
+            </div>
+            {students.length === 0 ? (
+              <EmptyState icon={<Icon.users />} title="No students" description="This school hasn't added any students yet." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Name', 'Code', 'Class', 'Section', 'Parent'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {students.map((student) => (
+                      <tr key={student._id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                          {student.firstName} {student.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge tone="slate">{student.studentCode}</Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
+
+        {/* Invoices */}
+        <section id="invoices" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold font-display text-slate-900">Invoices</h2>
+                <p className="mt-0.5 text-sm text-slate-500">All invoices issued by this school.</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setShowInvoiceForm(true);
+                  setEditingInvoice(null);
+                  setInvoiceForm(resetInvoiceForm());
+                }}
+                icon={<Icon.plus className="w-4 h-4" />}
+              >
+                Add Invoice
+              </Button>
+            </div>
+            {invoices.length === 0 ? (
+              <EmptyState icon={<Icon.receipt />} title="No invoices" description="Invoices created for this school will appear here." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Student', 'Term', 'Amount', 'Due Date', 'Status', 'Actions'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {invoices.map((invoice) => (
+                      <tr key={invoice._id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                          {invoice.student?.firstName} {invoice.student?.lastName}{' '}
+                          <span className="text-slate-400 text-xs">({invoice.student?.studentCode})</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{invoice.term}</td>
+                        <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-800">
+                          NPR {invoice.amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {new Date(invoice.dueDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StatusBadge status={invoice.status} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <ActionButtons
+                              onEdit={() => handleEditInvoice(invoice)}
+                              onDelete={() => handleDeleteInvoice(invoice._id)}
+                            />
+                            {invoice.status === 'paid' && <ReceiptButton invoiceId={invoice._id} showToast={showToast} />}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
       </div>
+
+      <Modal
+        isOpen={showInvoiceForm}
+        onClose={() => setShowInvoiceForm(false)}
+        title={editingInvoice ? 'Edit Invoice' : 'Create Invoice'}
+        description="Bill a student for a specific term or month."
+        size="md"
+      >
+        <form onSubmit={handleInvoiceSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Student" htmlFor="inv-student" required>
+            <Select id="inv-student" value={invoiceForm.student} onChange={(e) => setInvoiceForm({ ...invoiceForm, student: e.target.value })} required>
+              <option value="">Select student</option>
+              {students.map((student) => (
+                <option key={student._id} value={student._id}>
+                  {student.firstName} {student.lastName} ({student.studentCode})
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Amount (NPR)" htmlFor="inv-amount" required>
+            <Input id="inv-amount" type="number" step="0.01" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} required />
+          </Field>
+          <Field label="Term" htmlFor="inv-term" required>
+            <Input id="inv-term" value={invoiceForm.term} onChange={(e) => setInvoiceForm({ ...invoiceForm, term: e.target.value })} required placeholder="e.g. June 2026" />
+          </Field>
+          <Field label="Due Date" htmlFor="inv-due" required>
+            <Input id="inv-due" type="date" value={invoiceForm.dueDate} onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })} required />
+          </Field>
+          <Field label="Status" htmlFor="inv-status">
+            <Select id="inv-status" value={invoiceForm.status} onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </Select>
+          </Field>
+          <Field label="Description" htmlFor="inv-desc" className="sm:col-span-2">
+            <Input id="inv-desc" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} placeholder="Optional" />
+          </Field>
+
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowInvoiceForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">{editingInvoice ? 'Update Invoice' : 'Create Invoice'}</Button>
+          </div>
+        </form>
+      </Modal>
+
       {ConfirmDialogElement}
-    </div>
+    </AppLayout>
   );
 };
 
 export default SchoolDetailPage;
-

@@ -1,54 +1,60 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
-import PasswordInput from '../components/PasswordInput';
+import { useAuth } from '../context/AuthContext';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import AppLayout from '../components/layout/AppLayout';
+import PasswordInput from '../components/PasswordInput';
+import Icon from '../components/ui/icons';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import PageHeader from '../components/ui/PageHeader';
+import Field from '../components/ui/Input';
+
+const ROLE_HOME = {
+  super_admin: '/super-admin',
+  school_admin: '/school-admin',
+  parent: '/parent',
+};
 
 const ChangePasswordPage = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
-  const [formData, setFormData] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  const handleChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
-  };
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const navItems = [
+    { label: 'Dashboard', icon: <Icon.dashboard />, path: ROLE_HOME[user?.role] || '/parent' },
+    { label: 'My Profile', icon: <Icon.user />, path: '/profile' },
+    { label: 'Change Password', icon: <Icon.lock />, path: '/change-password', end: true },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError('New passwords do not match');
-      showToast('New passwords do not match', 'error');
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters long.');
       return;
     }
-
-    if (formData.newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      showToast('Password must be at least 6 characters', 'error');
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match.');
       return;
     }
 
     setLoading(true);
-
     try {
       await apiClient.post('/auth/change-password', {
-        oldPassword: formData.oldPassword,
-        newPassword: formData.newPassword,
+        currentPassword,
+        newPassword,
       });
-      setSuccess('Password changed successfully!');
       showToast('Password changed successfully', 'success');
-      setTimeout(() => {
-        navigate(-1);
-      }, 2000);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
       const msg = getErrorMessage(err, 'Failed to change password');
       setError(msg);
@@ -59,64 +65,71 @@ const ChangePasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">Change Password</h1>
+    <AppLayout navItems={navItems} title="Change Password" subtitle="Keep your account secure">
+      <div className="max-w-2xl space-y-8">
+        <PageHeader
+          title="Change Password"
+          description="Update your account password. Choose a strong, unique password you don't use elsewhere."
+          icon={<Icon.lock />}
+        />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-            <PasswordInput
-              value={formData.oldPassword}
-              onChange={(e) => handleChange('oldPassword', e.target.value)}
-              placeholder="Enter current password"
-            />
+        <Card>
+          <div className="card-header">
+            <h2 className="text-base font-bold font-display text-slate-900">Update password</h2>
+            <p className="mt-0.5 text-sm text-slate-500">Your new password must be at least 6 characters long.</p>
           </div>
+          <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
+            <Field label="Current Password" htmlFor="cp-current" required>
+              <PasswordInput
+                id="cp-current"
+                label="Current Password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter your current password"
+                autoComplete="current-password"
+              />
+            </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-            <PasswordInput
-              value={formData.newPassword}
-              onChange={(e) => handleChange('newPassword', e.target.value)}
-              placeholder="Enter new password"
-            />
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="New Password" htmlFor="cp-new" required>
+                <PasswordInput
+                  id="cp-new"
+                  label="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  autoComplete="new-password"
+                />
+              </Field>
+              <Field label="Confirm New Password" htmlFor="cp-confirm" required>
+                <PasswordInput
+                  id="cp-confirm"
+                  label="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your new password"
+                  autoComplete="new-password"
+                />
+              </Field>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-            <PasswordInput
-              value={formData.confirmPassword}
-              onChange={(e) => handleChange('confirmPassword', e.target.value)}
-              placeholder="Confirm new password"
-            />
-          </div>
+            {error && (
+              <div className="px-3.5 py-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-start gap-2">
+                <Icon.warning className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                {error}
+              </div>
+            )}
 
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          {success && <div className="text-green-600 text-sm">{success}</div>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {loading ? 'Changing...' : 'Change Password'}
-          </button>
-        </form>
-
-        <div className="mt-4 text-center">
-          <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm">
-            Go Back
-          </button>
-        </div>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+              <Button type="submit" loading={loading} icon={<Icon.check className="w-4 h-4" />}>
+                {loading ? 'Updating…' : 'Update Password'}
+              </Button>
+            </div>
+          </form>
+        </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
 export default ChangePasswordPage;
-
-
-
-
-
-

@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import AuthLayout from '../components/layout/AuthLayout';
+import Input, { Field } from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Icon from '../components/ui/icons';
 
 const ForgotPasswordPage = () => {
   const { showToast } = useToast();
@@ -18,9 +22,8 @@ const ForgotPasswordPage = () => {
 
     try {
       const response = await apiClient.post('/auth/forgot-password', { email });
-      const message = response.data.message;
-      setSuccess(message);
-      showToast(message, 'success');
+      setSuccess(response.data.message);
+      showToast(response.data.message, 'success');
     } catch (err) {
       const msg = getErrorMessage(err, 'Failed to send reset instructions');
       setError(msg);
@@ -31,80 +34,53 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-white/20 backdrop-blur-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
-            Shulkaa Suvidha
-          </h1>
-          <p className="text-sm text-gray-500 font-medium uppercase tracking-wide">
-            Digital Fee Management System
+    <AuthLayout maxWidth="max-w-md">
+      <div className="bg-white rounded-3xl shadow-lift border border-slate-100 p-6 sm:p-8">
+        <div className="mb-7">
+          <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+            <Icon.key className="w-6 h-6" />
+          </div>
+          <h2 className="text-2xl font-bold font-display text-slate-900 tracking-tight">Forgot password?</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Enter your email and we&apos;ll send you instructions to reset your password.
           </p>
         </div>
 
-        <h2 className="text-2xl font-bold text-center mb-2 text-gray-800">Forgot Password</h2>
-        <p className="text-center text-gray-600 mb-8">
-          Enter your email and we&apos;ll send you instructions to reset your password.
-        </p>
-
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-gray-50 focus:bg-white"
-              placeholder="Enter your email"
-            />
-          </div>
+          <Field label="Email address" htmlFor="email" required>
+            <div className="relative">
+              <Icon.mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" placeholder="you@example.com" />
+            </div>
+          </Field>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <div className="px-3.5 py-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-start gap-2">
+              <Icon.warning className="w-4 h-4 mt-0.5 flex-shrink-0" />
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg border border-green-100 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <div className="px-3.5 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-start gap-2">
+              <Icon.mail className="w-4 h-4 mt-0.5 flex-shrink-0" />
               {success}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || Boolean(success)}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {loading ? 'Sending...' : 'Send Reset Link'}
-          </button>
+          <Button type="submit" size="lg" loading={loading} disabled={loading || Boolean(success)} className="w-full">
+            {loading ? 'Sending…' : 'Send Reset Link'}
+          </Button>
         </form>
 
-        <div className="mt-8 text-center text-sm">
-          <Link
-            to="/login"
-            className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors"
-          >
+        <div className="mt-6 text-center text-sm">
+          <Link to="/login" className="inline-flex items-center gap-1.5 font-semibold text-brand-600 hover:text-brand-700 hover:underline">
+            <Icon.arrowLeft className="w-4 h-4" />
             Back to Login
           </Link>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

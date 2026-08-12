@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const Invoice = require('../models/Invoice');
 const Student = require('../models/Student');
+const Transaction = require('../models/Transaction');
 const logger = require('../config/logger');
 const { USER_ROLES } = require('../models/User');
 const { getSchoolId } = require('../utils/getSchoolId');
@@ -44,6 +45,12 @@ exports.getSchoolInvoices = async (req, res) => {
     if (!schoolId) {
       return res.status(403).json({ message: 'School admin must be linked to a school' });
     }
+
+    // Auto-flag expired pending invoices as overdue
+    await Invoice.updateMany(
+      { school: schoolId, status: 'pending', dueDate: { $lt: new Date() } },
+      { status: 'overdue' }
+    );
 
     const invoices = await Invoice.find({ school: schoolId })
       .populate('student', 'firstName lastName studentCode className section')
@@ -104,6 +111,12 @@ exports.getParentInvoices = async (req, res) => {
       return res.status(403).json({ message: 'Parent must be linked to a school' });
     }
 
+    // Auto-flag expired pending invoices as overdue
+    await Invoice.updateMany(
+      { school: schoolId, status: 'pending', dueDate: { $lt: new Date() } },
+      { status: 'overdue' }
+    );
+
     const students = await Student.find({ parent: req.user._id, school: schoolId });
     const studentIds = students.map((s) => s._id);
 
@@ -111,7 +124,36 @@ exports.getParentInvoices = async (req, res) => {
       .populate('student', 'firstName lastName studentCode className section')
       .sort({ createdAt: -1 });
 
-    res.json(invoices);
+    // Attach the latest non-successful payment attempt so parents can see
+    // that a payment was started / cancelled / failed on the invoice row.
+    const invoiceIds = invoices.map((inv) => inv._id);
+    const attempts = await Transaction.find({
+      invoice: { $in: invoiceIds },
+      status: { $ne: 'success' },
+    })
+      .sort({ updatedAt: 1 })
+      .lean();
+
+    const attemptByInvoice = {};
+    attempts.forEach((attempt) => {
+      attemptByInvoice[attempt.invoice.toString()] = attempt;
+    });
+
+    const result = invoices.map((inv) => {
+      const obj = inv.toObject();
+      const attempt = attemptByInvoice[inv._id.toString()];
+      if (attempt) {
+        obj.lastPaymentAttempt = {
+          status: attempt.status,
+          gateway: attempt.gateway,
+          gatewayRefId: attempt.gatewayRefId,
+          updatedAt: attempt.updatedAt,
+        };
+      }
+      return obj;
+    });
+
+    res.json(result);
   } catch (err) {
     logger.error('Get parent invoices error', { error: err.message });
     res.status(500).json({ message: 'Server error' });

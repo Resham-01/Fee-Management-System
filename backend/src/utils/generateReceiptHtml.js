@@ -90,7 +90,6 @@ const generateReceiptHtml = (receipt) => {
           </tr>
         </tbody>
       </table>
-      ${receipt.walletPhone ? `<p style="font-size:13px;color:#4b5563;margin-bottom:8px;"><strong>Wallet:</strong> ${receipt.walletPhone}</p>` : ''}
       <p style="font-size:13px;color:#4b5563;">This is a computer-generated receipt from Shulkaa Suvidha Fee Management System.</p>
     </div>
     <div class="footer">

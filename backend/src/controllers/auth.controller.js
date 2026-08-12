@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const Joi = require('joi');
 const { User, USER_ROLES } = require('../models/User');
 const School = require('../models/School');
+const Student = require('../models/Student');
+const Invoice = require('../models/Invoice');
 const logger = require('../config/logger');
 const { deriveShortName } = require('../utils/schoolShortName');
 const { sendPasswordResetEmail } = require('../utils/email');
@@ -42,6 +44,12 @@ const resetPasswordSchema = Joi.object({
   token: Joi.string().required(),
   newPassword: Joi.string().min(6).required(),
 });
+
+const updateProfileSchema = Joi.object({
+  name: Joi.string().min(1).max(100),
+  phone: Joi.string().allow('').max(30),
+  address: Joi.string().allow('').max(200),
+}).min(1);
 
 const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
@@ -273,6 +281,76 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
   } catch (err) {
     logger.error('Reset password error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const serializeUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  phone: user.phone || '',
+  address: user.address || '',
+  school: user.school,
+  createdAt: user.createdAt,
+});
+
+exports.getProfile = async (req, res) => {
+  try {
+    const user = req.user;
+    let extra = {};
+
+    if (user.role === USER_ROLES.SUPER_ADMIN) {
+      const schools = await School.find({}).select('isApproved');
+      extra.stats = {
+        totalSchools: schools.length,
+        approvedSchools: schools.filter((s) => s.isApproved).length,
+        pendingSchools: schools.filter((s) => !s.isApproved).length,
+      };
+    } else if (user.role === USER_ROLES.SCHOOL_ADMIN) {
+      const [totalStudents, invoices] = await Promise.all([
+        Student.countDocuments({ school: user.school?._id }),
+        Invoice.find({ school: user.school?._id }).select('amount status'),
+      ]);
+      extra.stats = {
+        totalStudents,
+        totalInvoices: invoices.length,
+        pendingInvoices: invoices.filter((i) => i.status === 'pending').length,
+        paidAmount: invoices.filter((i) => i.status === 'paid').reduce((sum, i) => sum + i.amount, 0),
+        pendingAmount: invoices.filter((i) => i.status === 'pending').reduce((sum, i) => sum + i.amount, 0),
+      };
+    } else if (user.role === USER_ROLES.PARENT) {
+      const children = await Student.find({
+        parent: user._id,
+        school: user.school?._id,
+      }).sort({ createdAt: -1 });
+      extra.children = children;
+    }
+
+    res.json({ user: serializeUser(user), ...extra });
+  } catch (err) {
+    logger.error('Get profile error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { error, value } = updateProfileSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const user = req.user;
+    if (value.name !== undefined) user.name = value.name;
+    if (value.phone !== undefined) user.phone = value.phone;
+    if (value.address !== undefined) user.address = value.address;
+    await user.save();
+
+    res.json({ user: serializeUser(user), message: 'Profile updated successfully' });
+  } catch (err) {
+    logger.error('Update profile error', { error: err.message });
     res.status(500).json({ message: 'Server error' });
   }
 };

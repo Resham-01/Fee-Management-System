@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
 import { useToast, getErrorMessage } from '../context/ToastContext';
+import AuthLayout from '../components/layout/AuthLayout';
+import Input, { Field } from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Button from '../components/ui/Button';
+import Icon from '../components/ui/icons';
 
 const ParentRegisterPage = () => {
   const { showToast } = useToast();
@@ -58,64 +63,34 @@ const ParentRegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 border border-gray-100">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Register as Parent</h1>
-          <p className="text-gray-600">Create your parent account to manage your child's fees</p>
+    <AuthLayout maxWidth="max-w-lg">
+      <div className="bg-white rounded-3xl shadow-lift border border-slate-100 p-6 sm:p-8">
+        <div className="mb-7">
+          <h2 className="text-2xl font-bold font-display text-slate-900 tracking-tight">Create a Parent Account</h2>
+          <p className="mt-1 text-sm text-slate-500">Link your children and manage their fees in one place.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="Enter your full name"
-            />
-          </div>
+          <Field label="Full Name" htmlFor="name" required>
+            <div className="relative">
+              <Icon.user className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input id="name" name="name" value={formData.name} onChange={handleChange} required className="pl-10" placeholder="Enter your full name" />
+            </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              placeholder="your.email@example.com"
-            />
-          </div>
+          <Field label="Email Address" htmlFor="email" required>
+            <div className="relative">
+              <Icon.mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input id="email" type="email" name="email" value={formData.email} onChange={handleChange} required className="pl-10" placeholder="you@example.com" />
+            </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-            <PasswordInput
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Enter a strong password"
-              className="border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+          <Field label="Password" htmlFor="password" required hint="Must be at least 6 characters.">
+            <PasswordInput id="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Create a strong password" label="Password" />
+          </Field>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Select School</label>
-            <select
-              name="schoolId"
-              value={formData.schoolId}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
-            >
+          <Field label="Select School" htmlFor="schoolId" required>
+            <Select id="schoolId" name="schoolId" value={formData.schoolId} onChange={handleChange} required>
               <option value="">Choose a school</option>
               {schools.length === 0 ? (
                 <option value="" disabled>No approved schools available</option>
@@ -126,60 +101,43 @@ const ParentRegisterPage = () => {
                   </option>
                 ))
               )}
-            </select>
+            </Select>
             {schools.length === 0 && (
-              <p className="mt-2 text-sm text-yellow-600">Please wait for schools to be approved by the admin.</p>
+              <p className="mt-2 text-xs text-amber-600 flex items-center gap-1.5">
+                <Icon.warning className="w-3.5 h-3.5" />
+                Please wait for schools to be approved by the admin.
+              </p>
             )}
-          </div>
+          </Field>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+            <div className="px-3.5 py-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-start gap-2">
+              <Icon.warning className="w-4 h-4 mt-0.5 flex-shrink-0" />
               {error}
             </div>
           )}
+
           {success && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm flex items-center gap-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+            <div className="px-3.5 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-start gap-2">
+              <Icon.check className="w-4 h-4 mt-0.5 flex-shrink-0" />
               {success}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || schools.length === 0}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Registering...
-              </span>
-            ) : (
-              'Create Account'
-            )}
-          </button>
+          <Button type="submit" size="lg" loading={loading} disabled={loading || schools.length === 0} className="w-full">
+            {loading ? 'Creating account…' : 'Create Account'}
+          </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Already have an account?{' '}
-            <a href="/login" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
-              Login here
-            </a>
-          </p>
+        <div className="mt-6 text-center text-sm">
+          <span className="text-slate-500">Already have an account?</span>{' '}
+          <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
+            Sign in
+          </Link>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
 export default ParentRegisterPage;
-

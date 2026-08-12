@@ -1,21 +1,15 @@
 const styles = {
   success: {
-    bar: 'bg-emerald-500',
-    box: 'border-emerald-200 bg-gradient-to-r from-emerald-50 to-white',
-    text: 'text-emerald-900',
     icon: 'text-emerald-600 bg-emerald-100',
+    title: 'text-emerald-900',
   },
   error: {
-    bar: 'bg-rose-500',
-    box: 'border-rose-200 bg-gradient-to-r from-rose-50 to-white',
-    text: 'text-rose-900',
     icon: 'text-rose-600 bg-rose-100',
+    title: 'text-rose-900',
   },
   info: {
-    bar: 'bg-blue-500',
-    box: 'border-blue-200 bg-gradient-to-r from-blue-50 to-white',
-    text: 'text-blue-900',
-    icon: 'text-blue-600 bg-blue-100',
+    icon: 'text-sky-600 bg-sky-100',
+    title: 'text-sky-900',
   },
 };
 
@@ -35,27 +29,26 @@ const ToastContainer = ({ toasts, onDismiss }) => {
   if (!toasts.length) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[200] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
+    <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2.5 w-full max-w-sm pointer-events-none">
       {toasts.map((toast) => {
         const theme = styles[toast.type] || styles.info;
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto overflow-hidden rounded-xl border shadow-xl ${theme.box} animate-[fadeIn_0.25s_ease-out]`}
+            className="pointer-events-auto overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-lift animate-slide-in-right"
             role="status"
           >
-            <div className={`h-1 ${theme.bar}`} />
             <div className="flex items-start gap-3 p-4">
               <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${theme.icon}`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {icons[toast.type] || icons.info}
                 </svg>
               </div>
-              <p className={`flex-1 text-sm font-medium leading-snug ${theme.text}`}>{toast.message}</p>
+              <p className={`flex-1 text-sm font-medium leading-snug pt-1.5 ${theme.title}`}>{toast.message}</p>
               <button
                 type="button"
                 onClick={() => onDismiss(toast.id)}
-                className="text-slate-400 hover:text-slate-600 transition"
+                className="mt-1 text-slate-400 hover:text-slate-600 transition"
                 aria-label="Dismiss"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

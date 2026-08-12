@@ -1,19 +1,74 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
-import NotificationPanel from '../components/NotificationPanel';
+import AppLayout from '../components/layout/AppLayout';
 import ActionButtons from '../components/ActionButtons';
 import { GRADE_OPTIONS } from '../constants/grades';
 import { PAYMENT_ACCOUNT_TYPES, getPaymentTypeLabel } from '../constants/paymentAccounts';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast, getErrorMessage } from '../context/ToastContext';
 import ReceiptButton from '../components/ReceiptButton';
+import Icon from '../components/ui/icons';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import StatCard from '../components/ui/StatCard';
+import StatusBadge from '../components/ui/StatusBadge';
+import Badge from '../components/ui/Badge';
+import PageHeader from '../components/ui/PageHeader';
+import Input, { Field } from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Textarea from '../components/ui/Textarea';
+import Modal from '../components/ui/Modal';
+import EmptyState from '../components/ui/EmptyState';
+import { CardSkeleton, TableSkeleton } from '../components/ui/Skeleton';
+
+const scrollToId = (id) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const resetInvoiceForm = () => ({
+  student: '',
+  amount: '',
+  dueDate: '',
+  term: '',
+  description: '',
+  status: 'pending',
+});
+
+const resetPaymentForm = () => ({
+  type: 'esewa',
+  merchantId: '',
+  merchantName: '',
+  bankName: '',
+  accountName: '',
+  accountNumber: '',
+  branch: '',
+  notes: '',
+});
+
+const emptyStudentForm = () => ({
+  firstName: '',
+  lastName: '',
+  className: '',
+  section: '',
+  parent: '',
+});
+
+const emptyFeeStructureForm = () => ({
+  student: '',
+  className: '',
+  section: '',
+  monthlyFee: '',
+  scholarship: '',
+  scholarshipType: 'none',
+  effectiveFrom: '',
+  effectiveTo: '',
+  notes: '',
+});
 
 const SchoolAdminDashboard = () => {
   const { confirm, ConfirmDialogElement } = useConfirm();
   const { showToast } = useToast();
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -24,75 +79,23 @@ const SchoolAdminDashboard = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [editingFeeStructure, setEditingFeeStructure] = useState(null);
   const [feeTargetMode, setFeeTargetMode] = useState('student');
-  const [studentForm, setStudentForm] = useState({
-    firstName: '',
-    lastName: '',
-    className: '',
-    section: '',
-    parent: '',
-  });
-  const [feeStructureForm, setFeeStructureForm] = useState({
-    student: '',
-    className: '',
-    section: '',
-    monthlyFee: '',
-    scholarship: '',
-    scholarshipType: 'none',
-    effectiveFrom: '',
-    effectiveTo: '',
-    notes: '',
-  });
+  const [studentForm, setStudentForm] = useState(emptyStudentForm());
+  const [feeStructureForm, setFeeStructureForm] = useState(emptyFeeStructureForm());
   const [generateInvoiceData, setGenerateInvoiceData] = useState({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
   });
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
-  const [invoiceForm, setInvoiceForm] = useState({
-    student: '',
-    amount: '',
-    dueDate: '',
-    term: '',
-    description: '',
-    status: 'pending',
-  });
+  const [invoiceForm, setInvoiceForm] = useState(resetInvoiceForm());
   const [paymentAccounts, setPaymentAccounts] = useState([]);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPaymentAccount, setEditingPaymentAccount] = useState(null);
-  const [paymentForm, setPaymentForm] = useState({
-    type: 'esewa',
-    merchantId: '',
-    merchantName: '',
-    bankName: '',
-    accountName: '',
-    accountNumber: '',
-    branch: '',
-    notes: '',
-  });
-
-  const resetInvoiceForm = () => ({
-    student: '',
-    amount: '',
-    dueDate: '',
-    term: '',
-    description: '',
-    status: 'pending',
-  });
+  const [paymentForm, setPaymentForm] = useState(resetPaymentForm());
 
   useEffect(() => {
     fetchData();
   }, []);
-
-  const resetPaymentForm = () => ({
-    type: 'esewa',
-    merchantId: '',
-    merchantName: '',
-    bankName: '',
-    accountName: '',
-    accountNumber: '',
-    branch: '',
-    notes: '',
-  });
 
   const fetchData = async () => {
     try {
@@ -171,7 +174,7 @@ const SchoolAdminDashboard = () => {
         ...studentForm,
         parent: studentForm.parent && studentForm.parent.trim() !== '' ? studentForm.parent : null,
       };
-      
+
       const isEditingStudent = !!editingStudent;
       if (editingStudent) {
         const formData = {
@@ -184,7 +187,7 @@ const SchoolAdminDashboard = () => {
       }
       setShowStudentForm(false);
       setEditingStudent(null);
-      setStudentForm({ firstName: '', lastName: '', className: '', section: '', parent: '' });
+      setStudentForm(emptyStudentForm());
       showToast(isEditingStudent ? 'Student updated successfully' : 'Student added successfully', 'success');
       fetchData();
     } catch (err) {
@@ -312,17 +315,7 @@ const SchoolAdminDashboard = () => {
       setShowFeeStructureForm(false);
       setEditingFeeStructure(null);
       setFeeTargetMode('student');
-      setFeeStructureForm({
-        student: '',
-        className: '',
-        section: '',
-        monthlyFee: '',
-        scholarship: '',
-        scholarshipType: 'none',
-        effectiveFrom: '',
-        effectiveTo: '',
-        notes: '',
-      });
+      setFeeStructureForm(emptyFeeStructureForm());
       showToast(
         isEditingFeeStructure ? 'Fee structure updated successfully' : 'Fee structure created successfully',
         'success'
@@ -360,10 +353,16 @@ const SchoolAdminDashboard = () => {
     if (!ok) return;
     try {
       const response = await apiClient.post('/fee-structures/generate-invoices', generateInvoiceData);
-      showToast(
-        `Generated ${response.data.created} invoice(s)${response.data.errors ? '. Some errors occurred.' : ''}`,
-        response.data.errors ? 'info' : 'success'
-      );
+      const data = response.data;
+      if (data.noFeeStructures) {
+        showToast(data.message, 'info');
+      } else if (data.created > 0) {
+        showToast(data.message, 'success');
+      } else if (data.errors && data.errors.length > 0) {
+        showToast(`${data.message}. ${data.errors[0]}`, 'info');
+      } else {
+        showToast('No new invoices were created for the selected month.', 'info');
+      }
       fetchData();
     } catch (err) {
       showToast(getErrorMessage(err, 'Failed to generate invoices'), 'error');
@@ -387,876 +386,712 @@ const SchoolAdminDashboard = () => {
     return acc;
   }, {});
 
+  const navItems = [
+    { label: 'Overview', icon: <Icon.dashboard />, onClick: () => scrollToId('top') },
+    { label: 'Payment Accounts', icon: <Icon.wallet />, onClick: () => scrollToId('accounts') },
+    { label: 'Students', icon: <Icon.users />, onClick: () => scrollToId('students') },
+    { label: 'Fee Structures', icon: <Icon.card />, onClick: () => scrollToId('fees') },
+    { label: 'Invoices', icon: <Icon.receipt />, onClick: () => scrollToId('invoices') },
+    { label: 'My Profile', icon: <Icon.user />, path: '/profile' },
+    { label: 'Change Password', icon: <Icon.lock />, path: '/change-password' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-gradient-to-r from-green-600 to-teal-600 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <h1 className="text-xl font-bold text-white">School Admin Dashboard</h1>
-            <div className="flex gap-4 items-center">
-              <NotificationPanel />
-              <span className="text-sm text-white">{user?.name}</span>
-              <a href="/change-password" className="text-white hover:text-gray-200 text-sm font-medium">
-                Change Password
-              </a>
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition shadow-md"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <AppLayout
+      navItems={navItems}
+      title="School Admin"
+      subtitle="Manage your students, fee structures and invoices"
+    >
+      <div id="top" className="scroll-mt-20 space-y-8">
+        <PageHeader
+          title="Overview"
+          description="Your school at a glance — students and fee collections."
+          icon={<Icon.school />}
+          actions={
+            <Button variant="secondary" onClick={fetchData} icon={<Icon.refresh className="w-4 h-4" />}>
+              Refresh
+            </Button>
+          }
+        />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Total Students</h3>
-            <p className="text-3xl font-bold text-gray-800">{students.length}</p>
+        {loading ? (
+          <CardSkeleton count={3} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <StatCard
+              label="Total Students"
+              value={students.length}
+              tone="brand"
+              icon={<Icon.users />}
+            />
+            <StatCard
+              label="Pending Fees"
+              value={`NPR ${totalPending.toLocaleString()}`}
+              tone="amber"
+              icon={<Icon.clock />}
+            />
+            <StatCard
+              label="Collected"
+              value={`NPR ${totalPaid.toLocaleString()}`}
+              tone="emerald"
+              icon={<Icon.money />}
+            />
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Total Pending</h3>
-            <p className="text-3xl font-bold text-yellow-600">NPR {totalPending.toLocaleString()}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-gray-600 text-sm">Total Paid</h3>
-            <p className="text-3xl font-bold text-green-600">NPR {totalPaid.toLocaleString()}</p>
-          </div>
-        </div>
+        )}
 
-        {/* Payment Accounts Section */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="p-6 border-b flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Payment Accounts</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Submit your school&apos;s payment details. Super Admin will verify before parents can pay fees.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowPaymentForm(true);
-                setEditingPaymentAccount(null);
-                setPaymentForm(resetPaymentForm());
-              }}
-              className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
-            >
-              Add Payment Account
-            </button>
-          </div>
-
-          {showPaymentForm && (
-            <div className="p-6 border-b bg-gradient-to-br from-teal-50 to-green-50">
-              <form onSubmit={handlePaymentAccountSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
-                  <select
-                    value={paymentForm.type}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, type: e.target.value })}
-                    required
-                    disabled={!!editingPaymentAccount}
-                    className="w-full px-4 py-2 border rounded-lg bg-white"
-                  >
-                    {PAYMENT_ACCOUNT_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {paymentForm.type === 'bank_transfer' ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-                      <input
-                        type="text"
-                        value={paymentForm.bankName}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, bankName: e.target.value })}
-                        required
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
-                      <input
-                        type="text"
-                        value={paymentForm.accountName}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, accountName: e.target.value })}
-                        required
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                      <input
-                        type="text"
-                        value={paymentForm.accountNumber}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })}
-                        required
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                      <input
-                        type="text"
-                        value={paymentForm.branch}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, branch: e.target.value })}
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Merchant ID / Number</label>
-                      <input
-                        type="text"
-                        value={paymentForm.merchantId}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, merchantId: e.target.value })}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        placeholder="e.g. 98XXXXXXXX"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Merchant / Account Name</label>
-                      <input
-                        type="text"
-                        value={paymentForm.merchantName}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, merchantName: e.target.value })}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        placeholder="School name on wallet"
-                      />
-                    </div>
-                  </>
-                )}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-                  <input
-                    type="text"
-                    value={paymentForm.notes}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                    placeholder="Any instructions for parents"
-                  />
-                </div>
-                <div className="md:col-span-2 flex gap-2">
-                  <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
-                    {editingPaymentAccount ? 'Update & Resubmit' : 'Submit for Approval'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPaymentForm(false);
-                      setEditingPaymentAccount(null);
-                    }}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {paymentAccounts.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                      No payment accounts submitted yet. Add your school&apos;s eSewa, Khalti, FonePay, or bank details.
-                    </td>
-                  </tr>
-                ) : (
-                  paymentAccounts.map((account) => (
-                    <tr key={account._id}>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium">
-                        {getPaymentTypeLabel(account.type)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {account.type === 'bank_transfer' ? (
-                          <span className="text-sm text-gray-700">
-                            {account.bankName} — {account.accountName} ({account.accountNumber})
-                          </span>
-                        ) : (
-                          <span className="text-sm text-gray-700">
-                            {account.merchantName || account.merchantId || '—'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {account.isVerified && account.isActive ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            Verified & Active
-                          </span>
-                        ) : account.rejectionReason ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                            Rejected
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pending Approval
-                          </span>
-                        )}
-                        {account.rejectionReason && (
-                          <p className="text-xs text-red-600 mt-1">{account.rejectionReason}</p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <ActionButtons
-                          onEdit={() => handleEditPaymentAccount(account)}
-                          onDelete={!account.isVerified ? () => handleDeletePaymentAccount(account._id) : undefined}
-                          showDelete={!account.isVerified}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Students Section */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="p-6 border-b flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800">Students</h2>
-            <button
-              onClick={() => {
-                setShowStudentForm(true);
-                setEditingStudent(null);
-                setStudentForm({ firstName: '', lastName: '', className: '', section: '', parent: '' });
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Add Student
-            </button>
-          </div>
-
-          {showStudentForm && (
-            <div className="p-6 border-b bg-gray-50">
-              <form onSubmit={handleStudentSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                  <input
-                    type="text"
-                    value={studentForm.firstName}
-                    onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    value={studentForm.lastName}
-                    onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                  <select
-                    value={studentForm.className}
-                    onChange={(e) => setStudentForm({ ...studentForm, className: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="">Select class</option>
-                    {GRADE_OPTIONS.map((grade) => (
-                      <option key={grade} value={grade}>
-                        {grade}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                  <input
-                    type="text"
-                    value={studentForm.section}
-                    onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div className="flex gap-2 items-end">
-                  <button
-                    type="submit"
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-                  >
-                    {editingStudent ? 'Update' : 'Add'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowStudentForm(false);
-                      setEditingStudent(null);
-                    }}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {!editingStudent && (
-                  <div className="md:col-span-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                    Student code is generated automatically (e.g. KMS-STU-5-001: school short name, class number, and order).
-                  </div>
-                )}
-              </form>
-            </div>
-          )}
-
-          {!loading && students.length > 0 && (
-            <div className="p-4 bg-gray-50 border-b">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Class-wise Student Details</h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(studentsByClass).map(([classLabel, count]) => (
-                  <span key={classLabel} className="text-xs bg-white border text-gray-700 px-3 py-1 rounded-full">
-                    {classLabel}: {count}
-                  </span>
-                ))}
+        {/* Payment Accounts */}
+        <section id="accounts" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold font-display text-slate-900">Payment Accounts</h2>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Submit payment details for parents. Super Admin verifies them before going live.
+                </p>
               </div>
+              <Button
+                onClick={() => {
+                  setShowPaymentForm(true);
+                  setEditingPaymentAccount(null);
+                  setPaymentForm(resetPaymentForm());
+                }}
+                icon={<Icon.plus className="w-4 h-4" />}
+              >
+                Add Payment Account
+              </Button>
             </div>
-          )}
 
-          {loading ? (
-            <div className="p-6 text-center">Loading...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {students.map((student) => (
-                    <tr key={student._id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {student.firstName} {student.lastName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{student.studentCode}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{student.className}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{student.section}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{student.parent?.name || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <ActionButtons
-                          onEdit={() => handleEdit(student)}
-                          onDelete={() => handleDelete(student._id)}
-                        />
-                      </td>
+            {loading ? (
+              <TableSkeleton rows={3} cols={4} />
+            ) : paymentAccounts.length === 0 ? (
+              <EmptyState
+                icon={<Icon.wallet />}
+                title="No payment accounts yet"
+                description="Add your school's eSewa, Khalti, FonePay, or bank details so parents can pay fees."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Type', 'Details', 'Status', 'Actions'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paymentAccounts.map((account) => (
+                      <tr key={account._id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                          {getPaymentTypeLabel(account.type)}
+                        </td>
+                        <td className="px-6 py-4">
+                          {account.type === 'bank_transfer' ? (
+                            <p className="text-sm text-slate-600">
+                              {account.bankName} — {account.accountName} ({account.accountNumber})
+                            </p>
+                          ) : (
+                            <p className="text-sm text-slate-600">{account.merchantName || account.merchantId || '—'}</p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {account.isVerified && account.isActive ? (
+                            <StatusBadge status="verified_active" />
+                          ) : account.rejectionReason ? (
+                            <StatusBadge status="rejected" />
+                          ) : (
+                            <StatusBadge status="pending approval" />
+                          )}
+                          {account.rejectionReason && (
+                            <p className="text-xs text-rose-600 mt-1 max-w-[180px]">{account.rejectionReason}</p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <ActionButtons
+                            onEdit={() => handleEditPaymentAccount(account)}
+                            onDelete={!account.isVerified ? () => handleDeletePaymentAccount(account._id) : undefined}
+                            showDelete={!account.isVerified}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
 
-        {/* Fee Structure Section */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="p-6 border-b flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800">Fee Structures</h2>
-            <div className="flex gap-2">
-              <button
+        {/* Students */}
+        <section id="students" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold font-display text-slate-900">Students</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Add and manage the students in your school.</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setShowStudentForm(true);
+                  setEditingStudent(null);
+                  setStudentForm(emptyStudentForm());
+                }}
+                icon={<Icon.plus className="w-4 h-4" />}
+              >
+                Add Student
+              </Button>
+            </div>
+
+            {!loading && students.length > 0 && (
+              <div className="px-5 sm:px-6 py-3.5 bg-slate-50/70 border-b border-slate-100">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Class-wise breakdown</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(studentsByClass).map(([classLabel, count]) => (
+                    <Badge key={classLabel} tone="indigo">
+                      {classLabel}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <TableSkeleton rows={5} cols={6} />
+            ) : students.length === 0 ? (
+              <EmptyState
+                icon={<Icon.users />}
+                title="No students yet"
+                description="Add your first student to start assigning fees and generating invoices."
+                action={
+                  <Button
+                    onClick={() => {
+                      setShowStudentForm(true);
+                      setEditingStudent(null);
+                      setStudentForm(emptyStudentForm());
+                    }}
+                    icon={<Icon.plus className="w-4 h-4" />}
+                  >
+                    Add Student
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Name', 'Code', 'Class', 'Section', 'Parent', 'Actions'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {students.map((student) => (
+                      <tr key={student._id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                          {student.firstName} {student.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge tone="slate">{student.studentCode}</Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{student.parent?.name || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <ActionButtons onEdit={() => handleEdit(student)} onDelete={() => handleDelete(student._id)} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
+
+        {/* Fee Structures */}
+        <section id="fees" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold font-display text-slate-900">Fee Structures</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Set monthly fees and scholarships for students or whole classes.</p>
+              </div>
+              <Button
                 onClick={() => {
                   setShowFeeStructureForm(true);
                   setEditingFeeStructure(null);
                   setFeeTargetMode('student');
-                  setFeeStructureForm({
-                    student: '',
-                    className: '',
-                    section: '',
-                    monthlyFee: '',
-                    scholarship: '',
-                    scholarshipType: 'none',
-                    effectiveFrom: '',
-                    effectiveTo: '',
-                    notes: '',
-                  });
+                  setFeeStructureForm(emptyFeeStructureForm());
                 }}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                icon={<Icon.plus className="w-4 h-4" />}
               >
                 Add Fee Structure
-              </button>
+              </Button>
             </div>
-          </div>
 
-          {showFeeStructureForm && (
-            <div className="p-6 border-b bg-gray-50">
-              <form onSubmit={handleFeeStructureSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Allocate Fee By</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="feeTargetMode"
-                        value="student"
-                        checked={feeTargetMode === 'student'}
-                        onChange={(e) => setFeeTargetMode(e.target.value)}
-                      />
-                      Student
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="feeTargetMode"
-                        value="class"
-                        checked={feeTargetMode === 'class'}
-                        onChange={(e) => setFeeTargetMode(e.target.value)}
-                      />
-                      Class-wise
-                    </label>
-                  </div>
+            {/* Generate Monthly Invoices */}
+            <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-brand-50/80 to-violet-50/80 border-b border-brand-100">
+              <h3 className="text-sm font-bold font-display text-slate-900 flex items-center gap-2">
+                <Icon.sparkles className="w-4 h-4 text-brand-600" />
+                Generate Monthly Invoices
+              </h3>
+              <div className="mt-3 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                <div className="flex gap-3">
+                  <Field label="Month" htmlFor="gen-month" className="flex-1">
+                    <Select
+                      id="gen-month"
+                      value={generateInvoiceData.month}
+                      onChange={(e) => setGenerateInvoiceData({ ...generateInvoiceData, month: parseInt(e.target.value) })}
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                        <option key={m} value={m}>
+                          {new Date(2000, m - 1).toLocaleString('default', { month: 'long' })}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Year" htmlFor="gen-year" className="w-24">
+                    <Input
+                      id="gen-year"
+                      type="number"
+                      value={generateInvoiceData.year}
+                      onChange={(e) => setGenerateInvoiceData({ ...generateInvoiceData, year: parseInt(e.target.value) })}
+                      min="2020"
+                      max="2100"
+                    />
+                  </Field>
                 </div>
-                <div>
-                  {feeTargetMode === 'student' ? (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-                      <select
-                        value={feeStructureForm.student}
-                        onChange={(e) => setFeeStructureForm({ ...feeStructureForm, student: e.target.value })}
-                        required
-                        className="w-full px-4 py-2 border rounded-lg"
-                      >
-                        <option value="">Select Student</option>
-                        {students.map((student) => (
-                          <option key={student._id} value={student._id}>
-                            {student.firstName} {student.lastName} ({student.studentCode})
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  ) : (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                      <select
-                        value={feeStructureForm.className}
-                        onChange={(e) => setFeeStructureForm({ ...feeStructureForm, className: e.target.value })}
-                        required
-                        className="w-full px-4 py-2 border rounded-lg bg-white"
-                      >
-                        <option value="">Select class</option>
-                        {GRADE_OPTIONS.map((grade) => (
-                          <option key={grade} value={grade}>
-                            {grade}
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  )}
-                </div>
-                <div>
-                  {feeTargetMode === 'class' ? (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Section (Optional)</label>
-                      <input
-                        type="text"
-                        value={feeStructureForm.section}
-                        onChange={(e) => setFeeStructureForm({ ...feeStructureForm, section: e.target.value })}
-                        className="w-full px-4 py-2 border rounded-lg"
-                        placeholder="e.g. A"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                      <input
-                        type="text"
-                        value={students.find((s) => s._id === feeStructureForm.student)?.className || ''}
-                        disabled
-                        className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-                      />
-                    </>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Fee (NPR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={feeStructureForm.monthlyFee}
-                    onChange={(e) => setFeeStructureForm({ ...feeStructureForm, monthlyFee: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Type</label>
-                  <select
-                    value={feeStructureForm.scholarshipType}
-                    onChange={(e) => setFeeStructureForm({ ...feeStructureForm, scholarshipType: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  >
-                    <option value="none">No Discount / Scholarship</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount (NPR)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Discount / Scholarship {feeStructureForm.scholarshipType === 'percentage' ? '(%)' : '(NPR)'}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={feeStructureForm.scholarship}
-                    onChange={(e) => setFeeStructureForm({ ...feeStructureForm, scholarship: e.target.value })}
-                    disabled={feeStructureForm.scholarshipType === 'none'}
-                    className="w-full px-4 py-2 border rounded-lg disabled:bg-gray-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Effective From</label>
-                  <input
-                    type="date"
-                    value={feeStructureForm.effectiveFrom}
-                    onChange={(e) => setFeeStructureForm({ ...feeStructureForm, effectiveFrom: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Effective To (Optional)</label>
-                  <input
-                    type="date"
-                    value={feeStructureForm.effectiveTo}
-                    onChange={(e) => setFeeStructureForm({ ...feeStructureForm, effectiveTo: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea
-                    value={feeStructureForm.notes}
-                    onChange={(e) => setFeeStructureForm({ ...feeStructureForm, notes: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                    rows="2"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-                  >
-                    {editingFeeStructure ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowFeeStructureForm(false);
-                      setEditingFeeStructure(null);
-                      setFeeTargetMode('student');
-                    }}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+                <Button onClick={handleGenerateInvoices} icon={<Icon.sparkles className="w-4 h-4" />}>
+                  Generate Invoices
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Creates invoices for all students with active fee structures for the selected month.
+              </p>
             </div>
-          )}
 
-          {/* Generate Monthly Invoices */}
-          <div className="p-6 border-b bg-blue-50">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Generate Monthly Invoices</h3>
-            <div className="flex gap-4 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                <select
-                  value={generateInvoiceData.month}
-                  onChange={(e) => setGenerateInvoiceData({ ...generateInvoiceData, month: parseInt(e.target.value) })}
-                  className="px-4 py-2 border rounded-lg"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
-                    <option key={m} value={m}>
-                      {new Date(2000, m - 1).toLocaleString('default', { month: 'long' })}
-                    </option>
-                  ))}
-                </select>
+            {loading ? (
+              <TableSkeleton rows={5} cols={6} />
+            ) : feeStructures.length === 0 ? (
+              <EmptyState
+                icon={<Icon.card />}
+                title="No fee structures yet"
+                description="Create a fee structure to start billing students automatically."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Target', 'Monthly Fee', 'Scholarship', 'Actual Fee', 'Effective From', 'Actions'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {feeStructures.map((feeStruct) => {
+                      const actualFee = calculateActualFee(feeStruct);
+                      return (
+                        <tr key={feeStruct._id} className="hover:bg-slate-50/70 transition">
+                          <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                            {feeStruct.student
+                              ? `${feeStruct.student?.firstName} ${feeStruct.student?.lastName}`
+                              : `${feeStruct.className}${feeStruct.section ? ` (${feeStruct.section})` : ''} — All`}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                            NPR {feeStruct.monthlyFee.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {feeStruct.scholarshipType === 'none' ? (
+                              <span className="text-slate-300">—</span>
+                            ) : feeStruct.scholarshipType === 'percentage' ? (
+                              <Badge tone="emerald">{feeStruct.scholarship}%</Badge>
+                            ) : (
+                              <Badge tone="emerald">NPR {feeStruct.scholarship.toLocaleString()}</Badge>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap font-semibold text-brand-700">
+                            NPR {actualFee.toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                            {new Date(feeStruct.effectiveFrom).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <ActionButtons
+                              onEdit={() => handleEditFeeStructure(feeStruct)}
+                              onDelete={() => handleDeleteFeeStructure(feeStruct._id)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
+            )}
+          </Card>
+        </section>
+
+        {/* Invoices */}
+        <section id="invoices" className="scroll-mt-20">
+          <Card>
+            <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                <input
-                  type="number"
-                  value={generateInvoiceData.year}
-                  onChange={(e) => setGenerateInvoiceData({ ...generateInvoiceData, year: parseInt(e.target.value) })}
-                  className="px-4 py-2 border rounded-lg"
-                  min="2020"
-                  max="2100"
-                />
+                <h2 className="text-base font-bold font-display text-slate-900">Invoices</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Track every invoice and its payment status.</p>
               </div>
-              <button
-                onClick={handleGenerateInvoices}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+              <Button
+                onClick={() => {
+                  setShowInvoiceForm(true);
+                  setEditingInvoice(null);
+                  setInvoiceForm(resetInvoiceForm());
+                }}
+                icon={<Icon.plus className="w-4 h-4" />}
               >
-                Generate Invoices
-              </button>
+                Add Invoice
+              </Button>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
-              This will create invoices for all students with active fee structures for the selected month.
-            </p>
-          </div>
 
-          {loading ? (
-            <div className="p-6 text-center">Loading...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly Fee</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scholarship</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actual Fee</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective From</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {feeStructures.map((feeStruct) => {
-                    const actualFee = calculateActualFee(feeStruct);
-                    return (
-                      <tr key={feeStruct._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {feeStruct.student
-                            ? `${feeStruct.student?.firstName} ${feeStruct.student?.lastName}`
-                            : `${feeStruct.className}${feeStruct.section ? ` (${feeStruct.section})` : ''} - All Students`}
+            {loading ? (
+              <TableSkeleton rows={5} cols={6} />
+            ) : invoices.length === 0 ? (
+              <EmptyState
+                icon={<Icon.receipt />}
+                title="No invoices yet"
+                description="Create an invoice manually or generate them for a whole month at once."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['Student', 'Term', 'Amount', 'Due Date', 'Status', 'Actions'].map((h) => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {invoices.map((invoice) => (
+                      <tr key={invoice._id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                          {invoice.student?.firstName} {invoice.student?.lastName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">NPR {feeStruct.monthlyFee.toLocaleString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {feeStruct.scholarshipType === 'none' ? (
-                            <span className="text-gray-400">-</span>
-                          ) : feeStruct.scholarshipType === 'percentage' ? (
-                            <span className="text-green-600">{feeStruct.scholarship}%</span>
-                          ) : (
-                            <span className="text-green-600">NPR {feeStruct.scholarship.toLocaleString()}</span>
-                          )}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{invoice.term}</td>
+                        <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-800">
+                          NPR {invoice.amount.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap font-semibold text-blue-600">
-                          NPR {actualFee.toLocaleString()}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {new Date(invoice.dueDate).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {new Date(feeStruct.effectiveFrom).toLocaleDateString()}
+                          <StatusBadge status={invoice.status} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <ActionButtons
-                            onEdit={() => handleEditFeeStructure(feeStruct)}
-                            onDelete={() => handleDeleteFeeStructure(feeStruct._id)}
-                          />
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <ActionButtons
+                              onEdit={() => handleEditInvoice(invoice)}
+                              onDelete={() => handleDeleteInvoice(invoice._id)}
+                            />
+                            {invoice.status === 'paid' && <ReceiptButton invoiceId={invoice._id} showToast={showToast} />}
+                          </div>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Invoices Section */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800">Invoices</h2>
-            <button
-              onClick={() => {
-                setShowInvoiceForm(true);
-                setEditingInvoice(null);
-                setInvoiceForm(resetInvoiceForm());
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md transition"
-            >
-              Add Invoice
-            </button>
-          </div>
-
-          {showInvoiceForm && (
-            <div className="p-6 border-b bg-gradient-to-br from-slate-50 to-blue-50">
-              <form onSubmit={handleInvoiceSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-                  <select
-                    value={invoiceForm.student}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, student: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="">Select student</option>
-                    {students.map((student) => (
-                      <option key={student._id} value={student._id}>
-                        {student.firstName} {student.lastName} ({student.studentCode})
-                      </option>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (NPR)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={invoiceForm.amount}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-                  <input
-                    type="text"
-                    value={invoiceForm.term}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, term: e.target.value })}
-                    required
-                    placeholder="e.g. June 2026"
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    value={invoiceForm.dueDate}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={invoiceForm.status}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="overdue">Overdue</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    value={invoiceForm.description}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
-                    placeholder="Optional"
-                  />
-                </div>
-                <div className="md:col-span-2 flex gap-2">
-                  <button
-                    type="submit"
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-md"
-                  >
-                    {editingInvoice ? 'Update Invoice' : 'Create Invoice'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowInvoiceForm(false);
-                      setEditingInvoice(null);
-                    }}
-                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
+      </div>
+
+      {/* Payment Account Modal */}
+      <Modal
+        isOpen={showPaymentForm}
+        onClose={() => setShowPaymentForm(false)}
+        title={editingPaymentAccount ? 'Edit Payment Account' : 'Add Payment Account'}
+        description="These details will be reviewed by the Super Admin before parents can use them."
+        size="md"
+      >
+        <form onSubmit={handlePaymentAccountSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Payment Type" htmlFor="pay-type" required>
+            <Select
+              id="pay-type"
+              value={paymentForm.type}
+              onChange={(e) => setPaymentForm({ ...paymentForm, type: e.target.value })}
+              required
+              disabled={!!editingPaymentAccount}
+            >
+              {PAYMENT_ACCOUNT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          {paymentForm.type === 'bank_transfer' ? (
+            <>
+              <Field label="Bank Name" htmlFor="bank-name" required>
+                <Input id="bank-name" value={paymentForm.bankName} onChange={(e) => setPaymentForm({ ...paymentForm, bankName: e.target.value })} required />
+              </Field>
+              <Field label="Account Name" htmlFor="acc-name" required>
+                <Input id="acc-name" value={paymentForm.accountName} onChange={(e) => setPaymentForm({ ...paymentForm, accountName: e.target.value })} required />
+              </Field>
+              <Field label="Account Number" htmlFor="acc-no" required>
+                <Input id="acc-no" value={paymentForm.accountNumber} onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })} required />
+              </Field>
+              <Field label="Branch" htmlFor="branch">
+                <Input id="branch" value={paymentForm.branch} onChange={(e) => setPaymentForm({ ...paymentForm, branch: e.target.value })} />
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field label="Merchant ID / Number" htmlFor="merchant-id">
+                <Input id="merchant-id" value={paymentForm.merchantId} onChange={(e) => setPaymentForm({ ...paymentForm, merchantId: e.target.value })} placeholder="e.g. 98XXXXXXXX" />
+              </Field>
+              <Field label="Merchant / Account Name" htmlFor="merchant-name">
+                <Input id="merchant-name" value={paymentForm.merchantName} onChange={(e) => setPaymentForm({ ...paymentForm, merchantName: e.target.value })} placeholder="School name on wallet" />
+              </Field>
+            </>
           )}
 
-          {loading ? (
-            <div className="p-6 text-center">Loading...</div>
-          ) : invoices.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No invoices yet.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Term</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {invoices.map((invoice) => (
-                    <tr key={invoice._id} className="hover:bg-slate-50/80 transition">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {invoice.student?.firstName} {invoice.student?.lastName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{invoice.term}</td>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
-                        NPR {invoice.amount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {new Date(invoice.dueDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {invoice.status === 'paid' ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            Paid
-                          </span>
-                        ) : invoice.status === 'overdue' ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                            Overdue
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-2 items-center">
-                          <ActionButtons
-                            onEdit={() => handleEditInvoice(invoice)}
-                            onDelete={() => handleDeleteInvoice(invoice._id)}
-                          />
-                          {invoice.status === 'paid' && (
-                            <ReceiptButton invoiceId={invoice._id} showToast={showToast} />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <Field label="Notes (optional)" htmlFor="pay-notes" className="sm:col-span-2">
+            <Input id="pay-notes" value={paymentForm.notes} onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} placeholder="Any instructions for parents" />
+          </Field>
+
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowPaymentForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">{editingPaymentAccount ? 'Update & Resubmit' : 'Submit for Approval'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Student Modal */}
+      <Modal
+        isOpen={showStudentForm}
+        onClose={() => setShowStudentForm(false)}
+        title={editingStudent ? 'Edit Student' : 'Add a New Student'}
+        description={editingStudent ? 'Update the details of this student.' : 'Students are managed by the school; parents link to them via their student code.'}
+        size="md"
+      >
+        <form onSubmit={handleStudentSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="First Name" htmlFor="st-first" required>
+            <Input id="st-first" value={studentForm.firstName} onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })} required />
+          </Field>
+          <Field label="Last Name" htmlFor="st-last" required>
+            <Input id="st-last" value={studentForm.lastName} onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })} required />
+          </Field>
+          <Field label="Class" htmlFor="st-class" required>
+            <Select id="st-class" value={studentForm.className} onChange={(e) => setStudentForm({ ...studentForm, className: e.target.value })} required>
+              <option value="">Select class</option>
+              {GRADE_OPTIONS.map((grade) => (
+                <option key={grade} value={grade}>
+                  {grade}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Section" htmlFor="st-section" required>
+            <Input id="st-section" value={studentForm.section} onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })} required placeholder="e.g. A" />
+          </Field>
+          {!editingStudent && (
+            <div className="sm:col-span-2 flex items-start gap-2 px-3.5 py-3 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 text-xs">
+              <Icon.info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>
+                The student code is generated automatically (e.g. KMS-STU-5-001: school short name, class number, and order).
+              </span>
             </div>
           )}
-        </div>
-      </div>
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowStudentForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">{editingStudent ? 'Update Student' : 'Add Student'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Fee Structure Modal */}
+      <Modal
+        isOpen={showFeeStructureForm}
+        onClose={() => setShowFeeStructureForm(false)}
+        title={editingFeeStructure ? 'Edit Fee Structure' : 'Add Fee Structure'}
+        description="Allocate a monthly fee to an individual student or an entire class."
+        size="md"
+      >
+        <form onSubmit={handleFeeStructureSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Allocate Fee By" className="sm:col-span-2">
+            <div className="flex gap-4 px-1 py-0.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="feeTargetMode"
+                  value="student"
+                  checked={feeTargetMode === 'student'}
+                  onChange={(e) => setFeeTargetMode(e.target.value)}
+                  className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm text-slate-700">Student</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="feeTargetMode"
+                  value="class"
+                  checked={feeTargetMode === 'class'}
+                  onChange={(e) => setFeeTargetMode(e.target.value)}
+                  className="w-4 h-4 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-sm text-slate-700">Class-wise</span>
+              </label>
+            </div>
+          </Field>
+
+          {feeTargetMode === 'student' ? (
+            <>
+              <Field label="Student" htmlFor="fs-student" required className="sm:col-span-2">
+                <Select id="fs-student" value={feeStructureForm.student} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, student: e.target.value })} required>
+                  <option value="">Select Student</option>
+                  {students.map((student) => (
+                    <option key={student._id} value={student._id}>
+                      {student.firstName} {student.lastName} ({student.studentCode})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Class" htmlFor="fs-class-display">
+                <Input
+                  id="fs-class-display"
+                  value={students.find((s) => s._id === feeStructureForm.student)?.className || ''}
+                  disabled
+                  placeholder="Auto-filled"
+                />
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field label="Class" htmlFor="fs-class" required>
+                <Select id="fs-class" value={feeStructureForm.className} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, className: e.target.value })} required>
+                  <option value="">Select class</option>
+                  {GRADE_OPTIONS.map((grade) => (
+                    <option key={grade} value={grade}>
+                      {grade}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Section (Optional)" htmlFor="fs-section">
+                <Input id="fs-section" value={feeStructureForm.section} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, section: e.target.value })} placeholder="e.g. A" />
+              </Field>
+            </>
+          )}
+
+          <Field label="Monthly Fee (NPR)" htmlFor="fs-monthly" required>
+            <Input id="fs-monthly" type="number" step="0.01" value={feeStructureForm.monthlyFee} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, monthlyFee: e.target.value })} required />
+          </Field>
+          <Field label="Scholarship Type" htmlFor="fs-scholarship-type">
+            <Select id="fs-scholarship-type" value={feeStructureForm.scholarshipType} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, scholarshipType: e.target.value })}>
+              <option value="none">No Discount</option>
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed Amount (NPR)</option>
+            </Select>
+          </Field>
+          <Field
+            label={`Discount ${feeStructureForm.scholarshipType === 'percentage' ? '(%)' : '(NPR)'}`}
+            htmlFor="fs-scholarship"
+          >
+            <Input
+              id="fs-scholarship"
+              type="number"
+              step="0.01"
+              value={feeStructureForm.scholarship}
+              onChange={(e) => setFeeStructureForm({ ...feeStructureForm, scholarship: e.target.value })}
+              disabled={feeStructureForm.scholarshipType === 'none'}
+            />
+          </Field>
+          <Field label="Effective From" htmlFor="fs-from" required>
+            <Input id="fs-from" type="date" value={feeStructureForm.effectiveFrom} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, effectiveFrom: e.target.value })} required />
+          </Field>
+          <Field label="Effective To (Optional)" htmlFor="fs-to">
+            <Input id="fs-to" type="date" value={feeStructureForm.effectiveTo} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, effectiveTo: e.target.value })} />
+          </Field>
+          <Field label="Notes" htmlFor="fs-notes" className="sm:col-span-2">
+            <Textarea id="fs-notes" value={feeStructureForm.notes} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, notes: e.target.value })} rows={2} />
+          </Field>
+
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowFeeStructureForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">{editingFeeStructure ? 'Update Fee Structure' : 'Create Fee Structure'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Invoice Modal */}
+      <Modal
+        isOpen={showInvoiceForm}
+        onClose={() => setShowInvoiceForm(false)}
+        title={editingInvoice ? 'Edit Invoice' : 'Create Invoice'}
+        description="Bill a student for a specific term or month."
+        size="md"
+      >
+        <form onSubmit={handleInvoiceSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Student" htmlFor="inv-student" required>
+            <Select id="inv-student" value={invoiceForm.student} onChange={(e) => setInvoiceForm({ ...invoiceForm, student: e.target.value })} required>
+              <option value="">Select student</option>
+              {students.map((student) => (
+                <option key={student._id} value={student._id}>
+                  {student.firstName} {student.lastName} ({student.studentCode})
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Amount (NPR)" htmlFor="inv-amount" required>
+            <Input id="inv-amount" type="number" step="0.01" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} required />
+          </Field>
+          <Field label="Term" htmlFor="inv-term" required>
+            <Input id="inv-term" value={invoiceForm.term} onChange={(e) => setInvoiceForm({ ...invoiceForm, term: e.target.value })} required placeholder="e.g. June 2026" />
+          </Field>
+          <Field label="Due Date" htmlFor="inv-due" required>
+            <Input id="inv-due" type="date" value={invoiceForm.dueDate} onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })} required />
+          </Field>
+          <Field label="Status" htmlFor="inv-status">
+            <Select id="inv-status" value={invoiceForm.status} onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </Select>
+          </Field>
+          <Field label="Description" htmlFor="inv-desc" className="sm:col-span-2">
+            <Input id="inv-desc" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} placeholder="Optional" />
+          </Field>
+
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowInvoiceForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">{editingInvoice ? 'Update Invoice' : 'Create Invoice'}</Button>
+          </div>
+        </form>
+      </Modal>
+
       {ConfirmDialogElement}
-    </div>
+    </AppLayout>
   );
 };
 
 export default SchoolAdminDashboard;
-
