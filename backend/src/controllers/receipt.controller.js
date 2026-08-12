@@ -5,7 +5,6 @@ const School = require('../models/School');
 const { USER_ROLES } = require('../models/User');
 const { getSchoolId } = require('../utils/getSchoolId');
 const { generateReceiptHtml } = require('../utils/generateReceiptHtml');
-const { maskPhone } = require('../utils/paymentOtp');
 const logger = require('../config/logger');
 
 const buildReceiptData = async (invoice, transaction) => {
@@ -35,7 +34,6 @@ const buildReceiptData = async (invoice, transaction) => {
     currency: invoice.currency || 'NPR',
     gateway: transaction?.gateway || null,
     gatewayRefId: transaction?.gatewayRefId || null,
-    walletPhone: transaction?.walletPhone ? maskPhone(transaction.walletPhone) : null,
     paidAt: transaction?.updatedAt || invoice.updatedAt,
     status: 'paid',
   };

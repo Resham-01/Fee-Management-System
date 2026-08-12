@@ -23,22 +23,20 @@ const transactionSchema = new mongoose.Schema(
       enum: ['esewa', 'khalti', 'fonepay'],
       required: true,
     },
+    transactionUuid: { type: String, required: true, unique: true },
+    // Khalti payment index returned by the gateway on initiate
+    pidx: { type: String },
     status: {
       type: String,
-      enum: ['initiated', 'otp_pending', 'success', 'failed'],
+      enum: ['initiated', 'success', 'failed', 'cancelled'],
       default: 'initiated',
     },
-    walletPhone: { type: String },
-    otpHash: { type: String },
-    otpExpiresAt: { type: Date },
-    otpAttempts: { type: Number, default: 0 },
     gatewayRefId: { type: String },
     rawResponse: { type: mongoose.Schema.Types.Mixed },
   },
   { timestamps: true }
 );
 
+transactionSchema.index({ invoice: 1, status: 1 });
+
 module.exports = mongoose.model('Transaction', transactionSchema);
-
-
-

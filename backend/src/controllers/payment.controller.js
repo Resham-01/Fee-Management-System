@@ -1,43 +1,27 @@
+const crypto = require('crypto');
 const Joi = require('joi');
 const Invoice = require('../models/Invoice');
 const Transaction = require('../models/Transaction');
 const Student = require('../models/Student');
 const PaymentAccount = require('../models/PaymentAccount');
-const { maskPaymentAccount } = require('../utils/maskPaymentAccount');
 const { getSchoolId } = require('../utils/getSchoolId');
-const {
-  OTP_EXPIRY_MS,
-  MAX_OTP_ATTEMPTS,
-  generateOtp,
-  hashOtp,
-  verifyOtp,
-  maskPhone,
-  sendPaymentOtpSms,
-} = require('../utils/paymentOtp');
+const { getGateway } = require('../services/payment');
 const logger = require('../config/logger');
 
 const initiatePaymentSchema = Joi.object({
   invoiceId: Joi.string().required(),
   gateway: Joi.string().valid('esewa', 'khalti', 'fonepay').required(),
-  walletPhone: Joi.string()
-    .pattern(/^[0-9]{10}$/)
-    .required()
-    .messages({ 'string.pattern.base': 'Wallet phone must be a 10-digit number' }),
 });
 
-const verifyOtpSchema = Joi.object({
-  transactionId: Joi.string().required(),
-  otp: Joi.string()
-    .length(6)
-    .pattern(/^[0-9]+$/)
-    .required()
-    .messages({ 'string.length': 'OTP must be 6 digits' }),
-});
+const getFrontendUrl = () => (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+const getBackendUrl = () => (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
 
-const resendOtpSchema = Joi.object({
-  transactionId: Joi.string().required(),
-});
+const resultUrl = (status, params = {}) => {
+  const query = new URLSearchParams({ status, ...params }).toString();
+  return `${getFrontendUrl()}/payments/result?${query}`;
+};
 
+// Verifies the parent is linked to the invoice's school and is the parent of the student
 const validateParentInvoiceAccess = async (invoiceId, user) => {
   const invoice = await Invoice.findById(invoiceId).populate('student');
   if (!invoice) {
@@ -58,32 +42,10 @@ const validateParentInvoiceAccess = async (invoiceId, user) => {
     return { error: { status: 403, message: 'Invoice does not belong to your child' } };
   }
 
-  if (invoice.status === 'paid') {
-    return { error: { status: 400, message: 'Invoice already paid' } };
-  }
-
   return { invoice };
 };
 
-const validateTransactionAccess = async (transactionId, user) => {
-  const transaction = await Transaction.findById(transactionId);
-  if (!transaction) {
-    return { error: { status: 404, message: 'Transaction not found' } };
-  }
-
-  if (!['initiated', 'otp_pending'].includes(transaction.status)) {
-    return { error: { status: 400, message: 'This payment session is no longer active' } };
-  }
-
-  const { error } = await validateParentInvoiceAccess(transaction.invoice, user);
-  if (error) {
-    return { error };
-  }
-
-  return { transaction };
-};
-
-// Parent: Initiate wallet payment and send SMS OTP
+// Parent: Start a real gateway payment (eSewa / Khalti)
 exports.initiatePayment = async (req, res) => {
   try {
     const { error, value } = initiatePaymentSchema.validate(req.body);
@@ -91,11 +53,22 @@ exports.initiatePayment = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const { invoiceId, gateway, walletPhone } = value;
+    const { invoiceId, gateway } = value;
+
+    const gatewayImpl = getGateway(gateway);
+    if (!gatewayImpl || gatewayImpl.available === false) {
+      return res.status(400).json({
+        message: `${gateway} payment gateway is not available yet. Please choose another method.`,
+      });
+    }
 
     const { invoice, error: accessError } = await validateParentInvoiceAccess(invoiceId, req.user);
     if (accessError) {
       return res.status(accessError.status).json({ message: accessError.message });
+    }
+
+    if (invoice.status === 'paid') {
+      return res.status(400).json({ message: 'Invoice already paid' });
     }
 
     const paymentAccount = await PaymentAccount.findOne({
@@ -111,168 +84,247 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    const otp = generateOtp();
-    const otpHash = await hashOtp(otp);
-    const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
-
+    const transactionUuid = crypto.randomUUID();
     const transaction = await Transaction.create({
       invoice: invoiceId,
       school: invoice.school,
       paymentAccount: paymentAccount._id,
       amount: invoice.amount,
       gateway,
-      walletPhone,
-      otpHash,
-      otpExpiresAt,
-      otpAttempts: 0,
-      status: 'otp_pending',
+      transactionUuid,
+      status: 'initiated',
     });
 
-    await sendPaymentOtpSms(walletPhone, otp, gateway, invoice.amount);
-
-    const accountDetails = maskPaymentAccount(paymentAccount);
-    const response = {
-      transactionId: transaction._id,
-      gateway,
+    // Form-based gateways (eSewa) return a hidden-form payload.
+    // URL-based gateways (Khalti) return a payment_url to redirect to.
+    const payload = await gatewayImpl.buildPaymentForm({
+      transactionUuid,
       amount: invoice.amount,
-      walletPhone: maskPhone(walletPhone),
-      paymentAccount: accountDetails,
-      message: `OTP sent to ${maskPhone(walletPhone)} via SMS`,
-      expiresInSeconds: OTP_EXPIRY_MS / 1000,
-    };
+      backendUrl: getBackendUrl(),
+    });
 
-    if (process.env.NODE_ENV !== 'production') {
-      response.demoOtp = otp;
+    if (payload.pidx) {
+      transaction.pidx = payload.pidx;
+      await transaction.save();
     }
 
-    res.json(response);
+    if (payload.type === 'url') {
+      return res.json({
+        transactionId: transaction._id,
+        gateway,
+        type: 'url',
+        paymentUrl: payload.paymentUrl,
+        message: `Redirecting to ${gatewayImpl.label || gateway} to complete payment`,
+      });
+    }
+
+    res.json({
+      transactionId: transaction._id,
+      gateway,
+      type: 'form',
+      gatewayUrl: payload.paymentUrl,
+      form: payload.form,
+      message: `Redirecting to ${gatewayImpl.label || gateway} to complete payment`,
+    });
   } catch (err) {
     logger.error('Initiate payment error', { error: err.message });
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Parent: Verify SMS OTP and complete wallet payment
-exports.verifyPaymentOtp = async (req, res) => {
+// eSewa redirects the browser back here with a base64 `data` payload
+exports.esewaCallback = async (req, res) => {
+  const gateway = getGateway('esewa');
   try {
-    const { error, value } = verifyOtpSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
+    const { data } = req.query;
+    if (!data) {
+      return res.redirect(resultUrl('failed', { message: 'No payment response received' }));
     }
 
-    const { transactionId, otp } = value;
-
-    const { transaction, error: accessError } = await validateTransactionAccess(transactionId, req.user);
-    if (accessError) {
-      return res.status(accessError.status).json({ message: accessError.message });
+    const payload = gateway.decodeCallback(data);
+    if (!payload || !payload.transaction_uuid) {
+      return res.redirect(resultUrl('failed', { message: 'Invalid payment response' }));
     }
 
-    if (transaction.otpExpiresAt && new Date() > transaction.otpExpiresAt) {
+    const transaction = await Transaction.findOne({ transactionUuid: payload.transaction_uuid });
+    if (!transaction) {
+      return res.redirect(resultUrl('failed', { message: 'Transaction not found' }));
+    }
+
+    const signatureOk = gateway.verifySignature(payload);
+    if (!signatureOk) {
       transaction.status = 'failed';
+      transaction.rawResponse = payload;
       await transaction.save();
-      return res.status(400).json({ message: 'OTP has expired. Please start payment again.' });
+      return res.redirect(
+        resultUrl('failed', { transactionId: transaction._id, message: 'Signature verification failed' })
+      );
     }
 
-    if (transaction.otpAttempts >= MAX_OTP_ATTEMPTS) {
-      transaction.status = 'failed';
-      await transaction.save();
-      return res.status(400).json({ message: 'Too many incorrect attempts. Please start payment again.' });
-    }
-
-    const isValid = await verifyOtp(otp, transaction.otpHash);
-    if (!isValid) {
-      transaction.otpAttempts += 1;
-      await transaction.save();
-      const remaining = MAX_OTP_ATTEMPTS - transaction.otpAttempts;
-      return res.status(400).json({
-        message: `Invalid OTP. ${remaining} attempt(s) remaining.`,
-        attemptsRemaining: remaining,
+    // Confirm with the eSewa status-check API (defence-in-depth)
+    let remoteStatus = null;
+    let remoteError = null;
+    try {
+      remoteStatus = await gateway.checkTransactionStatus({
+        transactionUuid: transaction.transactionUuid,
+        totalAmount: transaction.amount,
       });
+    } catch (err) {
+      remoteError = err.message;
     }
 
-    transaction.status = 'success';
-    transaction.gatewayRefId = `WALLET-${transaction.gateway.toUpperCase()}-${Date.now()}`;
-    transaction.otpHash = undefined;
-    transaction.otpExpiresAt = undefined;
+    const amountMatches = !remoteStatus || Number(remoteStatus.total_amount) === Number(transaction.amount);
+    const remoteComplete = !remoteStatus || remoteStatus.status === 'COMPLETE';
+
+    if (payload.status === 'COMPLETE' && amountMatches && remoteComplete) {
+      // Guard against callback replays so an invoice is only credited once
+      if (transaction.status !== 'success') {
+        transaction.status = 'success';
+        transaction.gatewayRefId = remoteStatus?.ref_id || payload.transaction_code || payload.transaction_id || null;
+        transaction.rawResponse = payload;
+        await transaction.save();
+        await Invoice.findByIdAndUpdate(transaction.invoice, { status: 'paid' });
+      }
+      return res.redirect(
+        resultUrl('success', {
+          transactionId: transaction._id,
+          ref: transaction.gatewayRefId,
+        })
+      );
+    }
+
+    transaction.status = 'failed';
+    transaction.rawResponse = payload;
     await transaction.save();
-
-    await Invoice.findByIdAndUpdate(transaction.invoice, { status: 'paid' });
-
-    res.json({
-      message: 'Payment successful',
-      transactionId: transaction._id,
-      gateway: transaction.gateway,
-      amount: transaction.amount,
-      gatewayRefId: transaction.gatewayRefId,
-    });
+    return res.redirect(
+      resultUrl('failed', {
+        transactionId: transaction._id,
+        message: `Payment was not completed${remoteError ? ` (${remoteError})` : ''}`,
+      })
+    );
   } catch (err) {
-    logger.error('Verify payment OTP error', { error: err.message });
-    res.status(500).json({ message: 'Server error' });
+    logger.error('eSewa callback error', { error: err.message });
+    return res.redirect(resultUrl('failed', { message: 'Server error' }));
   }
 };
 
-// Parent: Resend SMS OTP for pending payment
-exports.resendPaymentOtp = async (req, res) => {
+// Khalti redirects the browser back here with `pidx` (and order params).
+// Success is ONLY confirmed via the Lookup API — redirect params are never trusted.
+exports.khaltiCallback = async (req, res) => {
+  const gateway = getGateway('khalti');
   try {
-    const { error, value } = resendOtpSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ message: error.details[0].message });
+    const { pidx } = req.query;
+    if (!pidx) {
+      return res.redirect(resultUrl('failed', { message: 'No payment reference received' }));
     }
 
-    const { transactionId } = value;
-
-    const { transaction, error: accessError } = await validateTransactionAccess(transactionId, req.user);
-    if (accessError) {
-      return res.status(accessError.status).json({ message: accessError.message });
+    let transaction;
+    if (req.query.purchase_order_id) {
+      transaction = await Transaction.findOne({ transactionUuid: req.query.purchase_order_id });
+    }
+    if (!transaction) {
+      transaction = await Transaction.findOne({ pidx });
+    }
+    if (!transaction) {
+      return res.redirect(resultUrl('failed', { message: 'Transaction not found' }));
     }
 
-    const otp = generateOtp();
-    transaction.otpHash = await hashOtp(otp);
-    transaction.otpExpiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
-    transaction.otpAttempts = 0;
-    transaction.status = 'otp_pending';
+    let lookup;
+    try {
+      lookup = await gateway.lookupTransaction({ pidx });
+    } catch (err) {
+      logger.error('Khalti lookup error', { error: err.message });
+      return res.redirect(
+        resultUrl('failed', {
+          transactionId: transaction._id,
+          message: 'Could not verify the payment with Khalti. Please check your invoice status.',
+        })
+      );
+    }
+
+    const status = lookup.status;
+    const amountMatches =
+      lookup.total_amount == null || Number(lookup.total_amount) === Number(transaction.amount) * 100;
+
+    if (status === 'Completed' && amountMatches) {
+      if (transaction.status !== 'success') {
+        transaction.status = 'success';
+        transaction.gatewayRefId = lookup.transaction_id || lookup.idx || null;
+        transaction.rawResponse = lookup;
+        await transaction.save();
+        await Invoice.findByIdAndUpdate(transaction.invoice, { status: 'paid' });
+      }
+      return res.redirect(
+        resultUrl('success', {
+          transactionId: transaction._id,
+          ref: transaction.gatewayRefId,
+        })
+      );
+    }
+
+    const isCancelled = ['User canceled', 'Canceled', 'Expired'].includes(status);
+    transaction.status = isCancelled ? 'cancelled' : 'failed';
+    transaction.rawResponse = lookup;
     await transaction.save();
 
-    await sendPaymentOtpSms(transaction.walletPhone, otp, transaction.gateway, transaction.amount);
-
-    const response = {
-      message: `New OTP sent to ${maskPhone(transaction.walletPhone)}`,
-      expiresInSeconds: OTP_EXPIRY_MS / 1000,
-    };
-
-    if (process.env.NODE_ENV !== 'production') {
-      response.demoOtp = otp;
-    }
-
-    res.json(response);
+    return res.redirect(
+      resultUrl(isCancelled ? 'cancelled' : 'failed', {
+        transactionId: transaction._id,
+        message: isCancelled ? 'Payment was cancelled or expired.' : `Payment was not completed (${status || 'unknown'})`,
+      })
+    );
   } catch (err) {
-    logger.error('Resend payment OTP error', { error: err.message });
-    res.status(500).json({ message: 'Server error' });
+    logger.error('Khalti callback error', { error: err.message });
+    return res.redirect(resultUrl('failed', { message: 'Server error' }));
   }
 };
 
-// Payment webhook (public endpoint, should be secured with gateway secret)
-exports.paymentWebhook = async (req, res) => {
+// eSewa failure redirect (no payload; identifies the transaction from the URL)
+exports.paymentFailure = async (req, res) => {
+  const { transactionId } = req.query;
   try {
-    const { transactionId, status, gatewayRefId } = req.body;
+    if (transactionId) {
+      const transaction = await Transaction.findOne({ transactionUuid: transactionId });
+      if (transaction && transaction.status === 'initiated') {
+        transaction.status = 'cancelled';
+        await transaction.save();
+      }
+    }
+  } catch (err) {
+    logger.error('Payment failure handler error', { error: err.message });
+  }
 
+  return res.redirect(
+    resultUrl('cancelled', {
+      transactionId,
+      message: 'Payment was cancelled or failed.',
+    })
+  );
+};
+
+// Parent: poll transaction status after returning to the app
+exports.getTransactionStatus = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
     const transaction = await Transaction.findById(transactionId);
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    transaction.status = status;
-    transaction.gatewayRefId = gatewayRefId;
-    transaction.rawResponse = req.body;
-    await transaction.save();
-
-    if (status === 'success') {
-      await Invoice.findByIdAndUpdate(transaction.invoice, { status: 'paid' });
+    const { error: accessError } = await validateParentInvoiceAccess(transaction.invoice, req.user);
+    if (accessError) {
+      return res.status(accessError.status).json({ message: accessError.message });
     }
 
-    res.json({ message: 'Webhook processed' });
+    res.json({
+      transactionId: transaction._id,
+      status: transaction.status,
+      gateway: transaction.gateway,
+      amount: transaction.amount,
+      gatewayRefId: transaction.gatewayRefId || null,
+    });
   } catch (err) {
-    logger.error('Payment webhook error', { error: err.message });
+    logger.error('Get transaction status error', { error: err.message });
     res.status(500).json({ message: 'Server error' });
   }
 };

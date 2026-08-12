@@ -4,6 +4,7 @@ const Student = require('../models/Student');
 const Invoice = require('../models/Invoice');
 const logger = require('../config/logger');
 const { GRADE_OPTIONS } = require('../constants/grades');
+const { sendInvoiceNotificationEmail } = require('../utils/email');
 
 const feeStructureSchema = Joi.object({
   student: Joi.string().allow(null, ''),
@@ -189,6 +190,14 @@ exports.generateMonthlyInvoices = async (req, res) => {
       isActive: true,
     }).populate('student');
 
+    if (feeStructures.length === 0) {
+      return res.status(200).json({
+        message: 'No active fee structures found. Please create a fee structure for your students or classes first.',
+        created: 0,
+        noFeeStructures: true,
+      });
+    }
+
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
@@ -252,9 +261,47 @@ exports.generateMonthlyInvoices = async (req, res) => {
       }
     }
 
+    // Notify linked parents about their newly generated invoices (best-effort)
+    if (createdInvoices.length > 0) {
+      try {
+        const studentIds = [...new Set(createdInvoices.map((inv) => inv.student))];
+        const students = await Student.find({ _id: { $in: studentIds } })
+          .select('firstName lastName parent')
+          .populate('parent', 'name email');
+
+        const byParent = {};
+        createdInvoices.forEach((inv) => {
+          const student = students.find((s) => String(s._id) === String(inv.student));
+          const parent = student?.parent;
+          if (!parent || !parent.email) return;
+          if (!byParent[parent._id]) byParent[parent._id] = { parent, invoices: [] };
+          byParent[parent._id].invoices.push(inv);
+        });
+
+        await Promise.all(
+          Object.values(byParent).map(({ parent, invoices }) =>
+            sendInvoiceNotificationEmail({
+              to: parent.email,
+              name: parent.name || 'there',
+              schoolName: req.user.school?.name || 'your school',
+              term,
+              items: invoices.map((inv) => ({
+                studentName: students.find((s) => String(s._id) === String(inv.student))?.firstName || 'Student',
+                amount: inv.amount,
+                dueDate: inv.dueDate,
+              })),
+            })
+          )
+        );
+      } catch (err) {
+        logger.error('Invoice notification email error', { error: err.message });
+      }
+    }
+
     res.json({
-      message: `Generated ${createdInvoices.length} invoices`,
+      message: `Generated ${createdInvoices.length} invoice(s) for ${term}`,
       created: createdInvoices.length,
+      term,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (err) {

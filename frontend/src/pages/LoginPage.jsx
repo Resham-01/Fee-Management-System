@@ -1,8 +1,42 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import PasswordInput from '../components/PasswordInput';
+import AuthLayout from '../components/layout/AuthLayout';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Icon from '../components/ui/icons';
+
+const ROLE_OPTIONS = [
+  {
+    value: 'parent',
+    label: 'Parent',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+  },
+  {
+    value: 'school_admin',
+    label: 'School Admin',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 12h.01M9 15h.01M15 9h.01M15 12h.01M15 15h.01" />
+      </svg>
+    ),
+  },
+  {
+    value: 'super_admin',
+    label: 'Super Admin',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
+      </svg>
+    ),
+  },
+];
 
 const LoginPage = () => {
   const { showToast } = useToast();
@@ -48,124 +82,107 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border border-white/20 backdrop-blur-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
-            Shulkaa Suvidha
-          </h1>
-          <p className="text-sm text-gray-500 font-medium uppercase tracking-wide">
-            Digital Fee Management System
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            with Online Payment Integration
-          </p>
+    <AuthLayout maxWidth="max-w-md">
+      <div className="bg-white rounded-3xl shadow-lift border border-slate-100 p-6 sm:p-8">
+        <div className="mb-7">
+          <h2 className="text-2xl font-bold font-display text-slate-900 tracking-tight">Welcome back</h2>
+          <p className="mt-1 text-sm text-slate-500">Sign in to your account to continue</p>
         </div>
 
-        <h2 className="text-2xl font-bold text-center mb-2 text-gray-800">Welcome Back</h2>
-        <p className="text-center text-gray-600 mb-8">Login to your account</p>
-
-        <div className="grid grid-cols-3 gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setSelectedRole('parent')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-              selectedRole === 'parent'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-            }`}
-          >
-            Parent
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedRole('school_admin')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-              selectedRole === 'school_admin'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-            }`}
-          >
-            School Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedRole('super_admin')}
-            className={`py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
-              selectedRole === 'super_admin'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
-            }`}
-          >
-            Super Admin
-          </button>
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">I am a</p>
+          <div className="grid grid-cols-3 gap-2">
+            {ROLE_OPTIONS.map((role) => (
+              <button
+                key={role.value}
+                type="button"
+                onClick={() => setSelectedRole(role.value)}
+                className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border-2 text-xs font-semibold transition-all duration-150 ${
+                  selectedRole === role.value
+                    ? 'border-brand-600 bg-brand-50 text-brand-700 shadow-sm'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className={selectedRole === role.value ? 'text-brand-600' : 'text-slate-400'}>{role.icon}</span>
+                {role.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-gray-50 focus:bg-white"
-              placeholder="Enter your email"
-            />
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
+              Email address
+            </label>
+            <div className="relative">
+              <Icon.mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="pl-10"
+                placeholder="you@example.com"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                Password
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline transition-colors"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
+              label="Password"
+              id="password"
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <div className="px-3.5 py-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-start gap-2">
+              <Icon.warning className="w-4 h-4 mt-0.5 flex-shrink-0" />
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
+          <Button type="submit" size="lg" loading={loading} className="w-full">
+            {loading ? 'Signing in…' : 'Sign in'}
+          </Button>
         </form>
 
-        <div className="mt-8 text-center text-sm">
-          <span className="text-gray-500">Don't have an account? </span>
-          {selectedRole === 'parent' && (
-            <a
-              href="/register-parent"
-              className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors"
-            >
-              Register as Parent
-            </a>
-          )}
-          {selectedRole === 'school_admin' && (
-            <a
-              href="/register-school"
-              className="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline transition-colors"
-            >
-              Register School
-            </a>
+        <div className="mt-7 pt-6 border-t border-slate-100 text-center text-sm">
+          {selectedRole === 'parent' ? (
+            <>
+              <span className="text-slate-500">New to Shulkaa Suvidha?</span>{' '}
+              <Link to="/register-parent" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
+                Register as Parent
+              </Link>
+            </>
+          ) : selectedRole === 'school_admin' ? (
+            <>
+              <span className="text-slate-500">Is your school ready?</span>{' '}
+              <Link to="/register-school" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
+                Register your School
+              </Link>
+            </>
+          ) : (
+            <span className="text-slate-500">Super Admin accounts are provisioned by the platform team.</span>
           )}
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
