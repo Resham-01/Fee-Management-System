@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import PasswordInput from '../components/PasswordInput';
@@ -45,12 +46,16 @@ const LoginPage = () => {
   const [selectedRole, setSelectedRole] = useState('parent');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setResendMsg('');
     setLoading(true);
 
     const result = await login(email, password);
@@ -76,8 +81,26 @@ const LoginPage = () => {
     } else {
       const msg = result.message || 'Login failed. Please check your credentials.';
       setError(msg);
+      setNeedsVerification(Boolean(result.needsVerification));
       showToast(msg, 'error');
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email) return;
+    setResending(true);
+    setResendMsg('');
+    try {
+      const response = await apiClient.post('/auth/resend-verification', { email });
+      setResendMsg(response.data.message);
+      showToast(response.data.message, 'success');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to resend verification link';
+      setResendMsg(msg);
+      showToast(msg, 'error');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -153,7 +176,23 @@ const LoginPage = () => {
           {error && (
             <div className="px-3.5 py-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-start gap-2">
               <Icon.warning className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              {error}
+              <div className="flex-1 min-w-0">
+                {error}
+                {needsVerification && (
+                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resending || !email}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 transition disabled:opacity-50"
+                    >
+                      <Icon.mail className="w-3.5 h-3.5" />
+                      {resending ? 'Sending…' : 'Resend verification email'}
+                    </button>
+                    {resendMsg && <span className="text-xs text-emerald-700">{resendMsg}</span>}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

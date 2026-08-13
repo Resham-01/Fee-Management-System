@@ -6,6 +6,8 @@ const {
   changePassword,
   forgotPassword,
   resetPassword,
+  verifyEmail,
+  resendVerification,
   getProfile,
   updateProfile,
 } = require('../controllers/auth.controller');
@@ -19,6 +21,8 @@ router.post('/register-school', registerSchool);
 router.post('/register-parent', registerParent);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+router.post('/verify-email', verifyEmail);
+router.post('/resend-verification', resendVerification);
 
 // Protected routes
 router.post('/change-password', auth, changePassword);

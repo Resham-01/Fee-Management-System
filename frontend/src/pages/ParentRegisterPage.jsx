@@ -48,8 +48,8 @@ const ParentRegisterPage = () => {
 
     try {
       await apiClient.post('/auth/register-parent', formData);
-      setSuccess('Parent registered successfully!');
-      showToast('Parent account created successfully', 'success');
+      setSuccess('Parent account created! A verification link has been sent to your email. Verify it to activate your account.');
+      showToast('Check your email to verify your account', 'success');
       setTimeout(() => {
         navigate('/login');
       }, 2000);

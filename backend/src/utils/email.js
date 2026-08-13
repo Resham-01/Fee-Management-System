@@ -86,6 +86,42 @@ const sendPasswordResetEmail = async ({ to, name, resetUrl }) => {
 
 const formatNpr = (amount) => `NPR ${Number(amount || 0).toLocaleString()}`;
 
+const sendEmailVerificationEmail = async ({ to, name, verifyUrl }) => {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const subject = 'Verify your Shulkaa Suvidha email';
+  const text = `Hello ${name},\n\nWelcome to Shulkaa Suvidha. Please verify your email address by clicking the link below to activate your account:\n\n${verifyUrl}\n\nThis link expires in 24 hours. If you did not create an account, you can ignore this email.\n\nShulkaa Suvidha`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+        <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/logo.png" alt="Shulkaa Suvidha" width="32" height="32" style="border-radius:6px;" />
+        <span style="font-size:16px;font-weight:700;color:#1e1b4b;">Shulkaa Suvidha</span>
+      </div>
+      <p style="font-size:14px;color:#334155;">Hello ${name},</p>
+      <p style="font-size:14px;color:#334155;">Welcome to <strong>Shulkaa Suvidha</strong>! Please verify your email address to activate your account:</p>
+      <p style="text-align:center;margin:28px 0;">
+        <a href="${verifyUrl}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 28px;border-radius:10px;">Verify Email Address</a>
+      </p>
+      <p style="font-size:13px;color:#475569;">Or copy and paste this link into your browser:</p>
+      <p style="font-size:13px;color:#4f46e5;word-break:break-all;">${verifyUrl}</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:24px;">This link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>
+    </div>
+  `;
+
+  const mailTransporter = await getTransporter();
+
+  if (!mailTransporter) {
+    logger.warn('Email verification link (email not configured — link logged for development only)', {
+      email: to,
+      verifyUrl,
+    });
+    return false;
+  }
+
+  await mailTransporter.sendMail({ from, to, subject, text, html });
+  logger.info('Email verification email sent', { email: to });
+  return true;
+};
+
 const sendInvoiceNotificationEmail = async ({ to, name, schoolName, term, items }) => {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   const subject = `New monthly invoices for ${term} from ${schoolName}`;
@@ -120,4 +156,4 @@ const sendInvoiceNotificationEmail = async ({ to, name, schoolName, term, items 
   return true;
 };
 
-module.exports = { sendPasswordResetEmail, sendInvoiceNotificationEmail, isEmailConfigured, verifyEmailConfig };
+module.exports = { sendPasswordResetEmail, sendEmailVerificationEmail, sendInvoiceNotificationEmail, isEmailConfigured, verifyEmailConfig };

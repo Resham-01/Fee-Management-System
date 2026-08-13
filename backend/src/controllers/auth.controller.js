@@ -7,7 +7,7 @@ const Student = require('../models/Student');
 const Invoice = require('../models/Invoice');
 const logger = require('../config/logger');
 const { deriveShortName } = require('../utils/schoolShortName');
-const { sendPasswordResetEmail } = require('../utils/email');
+const { sendPasswordResetEmail, sendEmailVerificationEmail } = require('../utils/email');
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -45,6 +45,14 @@ const resetPasswordSchema = Joi.object({
   newPassword: Joi.string().min(6).required(),
 });
 
+const verifyEmailSchema = Joi.object({
+  token: Joi.string().required(),
+});
+
+const resendVerificationSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
 const updateProfileSchema = Joi.object({
   name: Joi.string().min(1).max(100),
   phone: Joi.string().allow('').max(30),
@@ -56,6 +64,29 @@ const hashResetToken = (token) => crypto.createHash('sha256').update(token).dige
 const getResetUrl = (token) => {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   return `${frontendUrl.replace(/\/$/, '')}/reset-password/${token}`;
+};
+
+const getVerifyUrl = (token) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return `${frontendUrl.replace(/\/$/, '')}/verify-email/${token}`;
+};
+
+const issueVerificationToken = async (user) => {
+  const verifyToken = crypto.randomBytes(32).toString('hex');
+  user.emailVerified = false;
+  user.emailVerificationToken = hashResetToken(verifyToken);
+  user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await sendEmailVerificationEmail({
+      to: user.email,
+      name: user.name,
+      verifyUrl: getVerifyUrl(verifyToken),
+    });
+  } catch (emailErr) {
+    logger.error('Failed to send email verification link', { error: emailErr.message });
+  }
 };
 
 const generateToken = (userId, role, schoolId) => {
@@ -80,6 +111,13 @@ exports.login = async (req, res) => {
 
     if (!user.isActive) {
       return res.status(403).json({ message: 'Account is deactivated' });
+    }
+
+    if (user.emailVerified === false) {
+      return res.status(403).json({
+        message: 'Please verify your email address before logging in. Check your inbox and click the verification link we sent.',
+        needsVerification: true,
+      });
     }
 
     // Check if school admin's school is approved
@@ -143,8 +181,11 @@ exports.registerSchool = async (req, res) => {
       school: school._id,
     });
 
+    await issueVerificationToken(admin);
+
     res.status(201).json({
-      message: 'School registered successfully. Waiting for approval from Super Admin.',
+      message:
+        'School registered successfully. A verification link has been sent to your email — verify it to activate your account. School approval is pending from Super Admin.',
       schoolId: school._id,
     });
   } catch (err) {
@@ -186,8 +227,10 @@ exports.registerParent = async (req, res) => {
       school: schoolId,
     });
 
+    await issueVerificationToken(parent);
+
     res.status(201).json({
-      message: 'Parent registered successfully',
+      message: 'Parent registered successfully. A verification link has been sent to your email — verify it to activate your account.',
       userId: parent._id,
     });
   } catch (err) {
@@ -251,7 +294,7 @@ exports.forgotPassword = async (req, res) => {
 
     res.json({
       message:
-        'If an account with that email exists, password reset instructions have been sent.',
+        'Password reset link has been sent to your email.',
     });
   } catch (err) {
     logger.error('Forgot password error', { error: err.message });
@@ -286,6 +329,60 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
   } catch (err) {
     logger.error('Reset password error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { error, value } = verifyEmailSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { token } = value;
+    const hashedToken = hashResetToken(token);
+
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired verification link' });
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({ message: 'Email verified successfully. You can now log in with your account.' });
+  } catch (err) {
+    logger.error('Email verification error', { error: err.message });
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.resendVerification = async (req, res) => {
+  try {
+    const { error, value } = resendVerificationSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { email } = value;
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (user && user.isActive && user.emailVerified === false) {
+      await issueVerificationToken(user);
+    }
+
+    res.json({
+      message: 'New verification link has been sent.',
+    });
+  } catch (err) {
+    logger.error('Resend verification error', { error: err.message });
     res.status(500).json({ message: 'Server error' });
   }
 };

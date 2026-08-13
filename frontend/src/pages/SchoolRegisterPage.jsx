@@ -36,8 +36,8 @@ const SchoolRegisterPage = () => {
 
     try {
       await apiClient.post('/auth/register-school', formData);
-      setSuccess('School registered successfully! Waiting for Super Admin approval.');
-      showToast('School registered! Waiting for admin approval.', 'success');
+      setSuccess('School registered! A verification link has been sent to the admin email. Verify it to activate your account, then wait for Super Admin approval.');
+      showToast('Check your email to verify your account', 'success');
       setTimeout(() => {
         navigate('/login');
       }, 2500);

@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         message: error.response?.data?.message || 'Login failed',
+        needsVerification: error.response?.data?.needsVerification === true,
       };
     }
   };
