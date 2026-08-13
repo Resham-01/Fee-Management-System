@@ -1,4 +1,6 @@
 
+const crypto = require('crypto');
+
 const getConfig = () => ({
   productCode: process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST',
   secretKey: process.env.ESEWA_SECRET_KEY || '8gBm/:&EnhH.1/q',
