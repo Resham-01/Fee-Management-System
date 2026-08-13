@@ -231,7 +231,7 @@ const SuperAdminDashboard = () => {
               />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
                       {['Name', 'Contact', 'Status', 'Actions'].map((h) => (
@@ -244,7 +244,7 @@ const SuperAdminDashboard = () => {
                   <tbody className="divide-y divide-slate-100">
                     {schools.map((school) => (
                       <tr key={school._id} className="hover:bg-slate-50/70 transition">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Name" className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => navigate(`/super-admin/school/${school._id}`)}
                             className="font-semibold text-brand-700 hover:text-brand-800 hover:underline"
@@ -252,15 +252,15 @@ const SuperAdminDashboard = () => {
                             {school.name}
                           </button>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Contact" className="px-6 py-4 whitespace-nowrap">
                           <p className="text-sm text-slate-600">{school.contactEmail}</p>
                           <p className="text-xs text-slate-400">{school.contactPhone}</p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Status" className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status={school.isApproved ? 'approved' : 'pending'} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-wrap gap-2">
+                        <td data-label="Actions" className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-2 justify-end sm:justify-start">
                             {!school.isApproved && (
                               <button
                                 onClick={() => handleApprove(school._id, school.name)}
@@ -305,7 +305,7 @@ const SuperAdminDashboard = () => {
               />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
                       {['Receipt No.', 'School', 'Student', 'Term', 'Amount', 'Method', 'Paid On', 'Action'].map((h) => (
@@ -318,25 +318,25 @@ const SuperAdminDashboard = () => {
                   <tbody className="divide-y divide-slate-100">
                     {receipts.map((receipt) => (
                       <tr key={receipt.invoiceId} className="hover:bg-slate-50/70 transition">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">{receipt.receiptNumber}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{receipt.schoolName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Receipt No." className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">{receipt.receiptNumber}</td>
+                        <td data-label="School" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{receipt.schoolName}</td>
+                        <td data-label="Student" className="px-6 py-4 whitespace-nowrap">
                           <p className="text-sm font-medium text-slate-800">{receipt.studentName}</p>
                           <p className="text-xs text-slate-400">{receipt.studentCode}</p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{receipt.term}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">
+                        <td data-label="Term" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{receipt.term}</td>
+                        <td data-label="Amount" className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">
                           {receipt.currency} {receipt.amount.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Method" className="px-6 py-4 whitespace-nowrap">
                           <Badge tone={receipt.gateway ? 'violet' : 'slate'}>
                             {receipt.gateway ? getPaymentTypeLabel(receipt.gateway) : 'Manual'}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        <td data-label="Paid On" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {new Date(receipt.paidAt).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Action" className="px-6 py-4 whitespace-nowrap">
                           <ReceiptButton invoiceId={receipt.invoiceId} showToast={showToast} />
                         </td>
                       </tr>

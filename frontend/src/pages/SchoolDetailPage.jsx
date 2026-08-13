@@ -333,7 +333,7 @@ const SchoolDetailPage = () => {
               />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
                       {['Type', 'Details', 'Status', 'Actions'].map((h) => (
@@ -346,10 +346,10 @@ const SchoolDetailPage = () => {
                   <tbody className="divide-y divide-slate-100">
                     {paymentAccounts.map((account) => (
                       <tr key={account._id} className="hover:bg-slate-50/70 transition">
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                        <td data-label="Type" className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
                           {getPaymentTypeLabel(account.type)}
                         </td>
-                        <td className="px-6 py-4">
+                        <td data-label="Details" className="px-6 py-4">
                           {account.type === 'bank_transfer' ? (
                             <div className="text-sm text-slate-600">
                               <p>{account.bankName} — {account.accountName}</p>
@@ -363,20 +363,22 @@ const SchoolDetailPage = () => {
                           )}
                           {account.notes && <p className="text-xs text-slate-400 mt-1">{account.notes}</p>}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {account.isVerified && account.isActive ? (
-                            <StatusBadge status="verified_active" />
-                          ) : account.rejectionReason ? (
-                            <StatusBadge status="rejected" />
-                          ) : (
-                            <StatusBadge status="pending approval" />
-                          )}
-                          {account.rejectionReason && (
-                            <p className="text-xs text-rose-600 mt-1 max-w-[180px]">{account.rejectionReason}</p>
-                          )}
+                        <td data-label="Status" className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col items-end gap-1">
+                            {account.isVerified && account.isActive ? (
+                              <StatusBadge status="verified_active" />
+                            ) : account.rejectionReason ? (
+                              <StatusBadge status="rejected" />
+                            ) : (
+                              <StatusBadge status="pending approval" />
+                            )}
+                            {account.rejectionReason && (
+                              <p className="text-xs text-rose-600 max-w-[180px]">{account.rejectionReason}</p>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-wrap gap-2">
+                        <td data-label="Actions" className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-2 justify-end sm:justify-start">
                             {!account.isVerified && (
                               <button
                                 onClick={() => handleVerifyPaymentAccount(account._id)}
@@ -425,7 +427,7 @@ const SchoolDetailPage = () => {
               <EmptyState icon={<Icon.users />} title="No students" description="This school hasn't added any students yet." />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
                       {['Name', 'Code', 'Class', 'Section', 'Parent'].map((h) => (
@@ -438,15 +440,15 @@ const SchoolDetailPage = () => {
                   <tbody className="divide-y divide-slate-100">
                     {students.map((student) => (
                       <tr key={student._id} className="hover:bg-slate-50/70 transition">
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                        <td data-label="Name" className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
                           {student.firstName} {student.lastName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Code" className="px-6 py-4 whitespace-nowrap">
                           <Badge tone="slate">{student.studentCode}</Badge>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
+                        <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td>
+                        <td data-label="Parent" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
                         </td>
                       </tr>
@@ -481,7 +483,7 @@ const SchoolDetailPage = () => {
               <EmptyState icon={<Icon.receipt />} title="No invoices" description="Invoices created for this school will appear here." />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
                       {['Student', 'Term', 'Amount', 'Due Date', 'Status', 'Actions'].map((h) => (
@@ -494,22 +496,22 @@ const SchoolDetailPage = () => {
                   <tbody className="divide-y divide-slate-100">
                     {invoices.map((invoice) => (
                       <tr key={invoice._id} className="hover:bg-slate-50/70 transition">
-                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                        <td data-label="Student" className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
                           {invoice.student?.firstName} {invoice.student?.lastName}{' '}
                           <span className="text-slate-400 text-xs">({invoice.student?.studentCode})</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{invoice.term}</td>
-                        <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-800">
+                        <td data-label="Term" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{invoice.term}</td>
+                        <td data-label="Amount" className="px-6 py-4 whitespace-nowrap font-semibold text-slate-800">
                           NPR {invoice.amount.toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        <td data-label="Due Date" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {new Date(invoice.dueDate).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td data-label="Status" className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status={invoice.status} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-wrap gap-2 items-center">
+                        <td data-label="Actions" className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-wrap gap-2 items-center justify-end sm:justify-start">
                             <ActionButtons
                               onEdit={() => handleEditInvoice(invoice)}
                               onDelete={() => handleDeleteInvoice(invoice._id)}

@@ -306,7 +306,7 @@ const ProfilePage = () => {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full responsive-table">
                         <thead>
                           <tr className="border-b border-slate-100">
                             {['Name', 'Student Code', 'Class', 'Section'].map((h) => (
@@ -319,14 +319,14 @@ const ProfilePage = () => {
                         <tbody className="divide-y divide-slate-100">
                           {children.map((child) => (
                             <tr key={child._id} className="hover:bg-slate-50/70 transition">
-                              <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
+                              <td data-label="Name" className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
                                 {child.firstName} {child.lastName}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                              <td data-label="Student Code" className="px-6 py-4 whitespace-nowrap">
                                 <Badge tone="slate">{child.studentCode}</Badge>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.className}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.section}</td>
+                              <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.className}</td>
+                              <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.section}</td>
                             </tr>
                           ))}
                         </tbody>

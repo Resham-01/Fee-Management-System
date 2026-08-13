@@ -29,7 +29,7 @@ const ToastContainer = ({ toasts, onDismiss }) => {
   if (!toasts.length) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2.5 w-full max-w-sm pointer-events-none">
+    <div className="fixed top-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:w-full sm:max-w-sm z-[200] flex flex-col gap-2.5 pointer-events-none">
       {toasts.map((toast) => {
         const theme = styles[toast.type] || styles.info;
         return (

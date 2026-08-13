@@ -26,33 +26,33 @@ const AppContent = () => {
         {!user && (
           <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16 items-center">
-                <Link to="/" className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 sm:py-0 sm:h-16">
+                <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
                   <img
                     src="/logo.png"
                     alt="Shulkaa Suvidha"
                     className="w-9 h-9 object-contain"
                   />
-                  <span className="text-lg font-bold font-display text-slate-900">Shulkaa Suvidha</span>
+                  <span className="text-base sm:text-lg font-bold font-display text-slate-900">Shulkaa Suvidha</span>
                 </Link>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 ml-auto">
                   <Link
                     to="/login"
-                    className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+                    className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
                   >
                     Login
                   </Link>
                   <Link
                     to="/register-school"
-                    className="px-4 py-2 rounded-xl text-sm font-semibold text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 transition"
+                    className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-brand-700 border border-brand-200 bg-brand-50 hover:bg-brand-100 transition"
                   >
-                    Register School
+                    Register <span className="hidden min-[400px]:inline">School</span>
                   </Link>
                   <Link
                     to="/register-parent"
-                    className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 shadow-sm shadow-brand-600/30 transition"
+                    className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-b from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 shadow-sm shadow-brand-600/30 transition"
                   >
-                    Register Parent
+                    Register <span className="hidden min-[400px]:inline">Parent</span>
                   </Link>
                 </div>
               </div>

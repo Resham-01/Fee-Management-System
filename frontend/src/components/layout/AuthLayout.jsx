@@ -86,9 +86,9 @@ const BrandPanel = () => (
 const AuthLayout = ({ children, maxWidth = 'max-w-md' }) => (
   <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-2">
     <BrandPanel />
-    <div className="flex items-center justify-center px-4 py-10 sm:px-8 relative">
+    <div className="flex items-start sm:items-center justify-center px-4 pt-24 sm:pt-28 pb-10 sm:px-8 lg:pt-10 lg:items-center relative">
       {/* Mobile brand mark */}
-      <div className="lg:hidden absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
+      <div className="lg:hidden absolute top-5 left-1/2 -translate-x-1/2 flex flex-col items-center">
         <img
           src="/logo.png"
           alt="Shulkaa Suvidha"
