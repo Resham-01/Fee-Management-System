@@ -48,14 +48,15 @@ const verifyEmailConfig = async () => {
   return true;
 };
 
-const sendPasswordResetEmail = async ({ to, name, resetUrl }) => {
+const sendPasswordResetEmail = async ({ to, name, resetUrl, baseUrl }) => {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const logoUrl = `${baseUrl || process.env.FRONTEND_URL || 'http://localhost:5173'}/logo.png`;
   const subject = 'Reset your Shulkaa Suvidha password';
   const text = `Hello ${name},\n\nYou requested a password reset. Click the link below to set a new password:\n\n${resetUrl}\n\nThis link expires in 1 hour. If you did not request this, you can ignore this email.\n\nShulkaa Suvidha`;
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-        <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/logo.png" alt="Shulkaa Suvidha" width="32" height="32" style="border-radius:6px;" />
+        <img src="${logoUrl}" alt="Shulkaa Suvidha" width="32" height="32" style="border-radius:6px;" />
         <span style="font-size:16px;font-weight:700;color:#1e1b4b;">Shulkaa Suvidha</span>
       </div>
       <p style="font-size:14px;color:#334155;">Hello ${name},</p>
@@ -86,14 +87,15 @@ const sendPasswordResetEmail = async ({ to, name, resetUrl }) => {
 
 const formatNpr = (amount) => `NPR ${Number(amount || 0).toLocaleString()}`;
 
-const sendEmailVerificationEmail = async ({ to, name, verifyUrl }) => {
+const sendEmailVerificationEmail = async ({ to, name, verifyUrl, baseUrl }) => {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const logoUrl = `${baseUrl || process.env.FRONTEND_URL || 'http://localhost:5173'}/logo.png`;
   const subject = 'Verify your Shulkaa Suvidha email';
   const text = `Hello ${name},\n\nWelcome to Shulkaa Suvidha. Please verify your email address by clicking the link below to activate your account:\n\n${verifyUrl}\n\nThis link expires in 24 hours. If you did not create an account, you can ignore this email.\n\nShulkaa Suvidha`;
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-        <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/logo.png" alt="Shulkaa Suvidha" width="32" height="32" style="border-radius:6px;" />
+        <img src="${logoUrl}" alt="Shulkaa Suvidha" width="32" height="32" style="border-radius:6px;" />
         <span style="font-size:16px;font-weight:700;color:#1e1b4b;">Shulkaa Suvidha</span>
       </div>
       <p style="font-size:14px;color:#334155;">Hello ${name},</p>

@@ -9,6 +9,18 @@ const logger = require('../config/logger');
 const { deriveShortName } = require('../utils/schoolShortName');
 const { sendPasswordResetEmail, sendEmailVerificationEmail } = require('../utils/email');
 
+// Strong password policy: min 8 chars, at least one lowercase, one uppercase,
+// one digit and one special character.
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+const passwordField = () =>
+  Joi.string()
+    .min(8)
+    .pattern(
+      PASSWORD_PATTERN,
+      'must be at least 8 characters and include an uppercase letter, a lowercase letter, a number and a special character'
+    );
+
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
@@ -21,19 +33,19 @@ const registerSchoolSchema = Joi.object({
   contactPhone: Joi.string().required(),
   adminName: Joi.string().required(),
   adminEmail: Joi.string().email().required(),
-  adminPassword: Joi.string().min(6).required(),
+  adminPassword: passwordField().required(),
 });
 
 const registerParentSchema = Joi.object({
   name: Joi.string().required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
+  password: passwordField().required(),
   schoolId: Joi.string().required(),
 });
 
 const changePasswordSchema = Joi.object({
   oldPassword: Joi.string().required(),
-  newPassword: Joi.string().min(6).required(),
+  newPassword: passwordField().required(),
 });
 
 const forgotPasswordSchema = Joi.object({
@@ -42,7 +54,7 @@ const forgotPasswordSchema = Joi.object({
 
 const resetPasswordSchema = Joi.object({
   token: Joi.string().required(),
-  newPassword: Joi.string().min(6).required(),
+  newPassword: passwordField().required(),
 });
 
 const verifyEmailSchema = Joi.object({
@@ -61,17 +73,25 @@ const updateProfileSchema = Joi.object({
 
 const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
-const getResetUrl = (token) => {
+// Builds links from the URL the user is actually browsing so they also work
+// from remote devices (mobile, another machine). Priority:
+//   1. Origin header of the request (e.g. http://192.168.1.5:5173)
+//   2. FRONTEND_URL env var
+//   3. localhost fallback
+const getFrontendBaseUrl = (req) => {
+  const origin = req && req.get ? req.get('origin') : null;
+  if (origin && /^https?:\/\/[^/\s]+$/i.test(origin)) {
+    return origin;
+  }
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  return `${frontendUrl.replace(/\/$/, '')}/reset-password/${token}`;
+  return frontendUrl.replace(/\/$/, '');
 };
 
-const getVerifyUrl = (token) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  return `${frontendUrl.replace(/\/$/, '')}/verify-email/${token}`;
-};
+const getResetUrl = (req, token) => `${getFrontendBaseUrl(req)}/reset-password/${token}`;
 
-const issueVerificationToken = async (user) => {
+const getVerifyUrl = (req, token) => `${getFrontendBaseUrl(req)}/verify-email/${token}`;
+
+const issueVerificationToken = async (user, req) => {
   const verifyToken = crypto.randomBytes(32).toString('hex');
   user.emailVerified = false;
   user.emailVerificationToken = hashResetToken(verifyToken);
@@ -82,7 +102,8 @@ const issueVerificationToken = async (user) => {
     await sendEmailVerificationEmail({
       to: user.email,
       name: user.name,
-      verifyUrl: getVerifyUrl(verifyToken),
+      verifyUrl: getVerifyUrl(req, verifyToken),
+      baseUrl: getFrontendBaseUrl(req),
     });
   } catch (emailErr) {
     logger.error('Failed to send email verification link', { error: emailErr.message });
@@ -181,7 +202,7 @@ exports.registerSchool = async (req, res) => {
       school: school._id,
     });
 
-    await issueVerificationToken(admin);
+    await issueVerificationToken(admin, req);
 
     res.status(201).json({
       message:
@@ -227,7 +248,7 @@ exports.registerParent = async (req, res) => {
       school: schoolId,
     });
 
-    await issueVerificationToken(parent);
+    await issueVerificationToken(parent, req);
 
     res.status(201).json({
       message: 'Parent registered successfully. A verification link has been sent to your email — verify it to activate your account.',
@@ -279,12 +300,13 @@ exports.forgotPassword = async (req, res) => {
       user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
       await user.save({ validateBeforeSave: false });
 
-      const resetUrl = getResetUrl(resetToken);
+      const resetUrl = getResetUrl(req, resetToken);
       try {
         await sendPasswordResetEmail({
           to: user.email,
           name: user.name,
           resetUrl,
+          baseUrl: getFrontendBaseUrl(req),
         });
       } catch (emailErr) {
         // Never leak SMTP failures to the client; log for the developer instead.
@@ -375,7 +397,7 @@ exports.resendVerification = async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
 
     if (user && user.isActive && user.emailVerified === false) {
-      await issueVerificationToken(user);
+      await issueVerificationToken(user, req);
     }
 
     res.json({

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
+import { validatePassword, PASSWORD_RULES } from '../utils/validation';
 import { useToast, getErrorMessage } from '../context/ToastContext';
 import AuthLayout from '../components/layout/AuthLayout';
 import Input, { Field } from '../components/ui/Input';
@@ -44,6 +45,14 @@ const ParentRegisterPage = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    const pwdError = validatePassword(formData.password);
+    if (pwdError) {
+      setError(pwdError);
+      showToast(pwdError, 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -85,7 +94,7 @@ const ParentRegisterPage = () => {
             </div>
           </Field>
 
-          <Field label="Password" htmlFor="password" required hint="Must be at least 6 characters.">
+          <Field label="Password" htmlFor="password" required hint={PASSWORD_RULES}>
             <PasswordInput id="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Create a strong password" label="Password" />
           </Field>
 

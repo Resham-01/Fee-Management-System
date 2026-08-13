@@ -66,9 +66,9 @@ node scripts/seedSampleData.js
 ```
 
 This creates:
-- Super Admin: `superadmin@gmail.com` / `SuperAdmin@123`
-- School Admin: `schooladmin@gmail.com` / `SchoolAdmin@123`
-- Parent: `parent@gmail.com` / `Parent@123`
+- Super Admin: `resham.thapa@midvalley.edu.np` / `SuperAdmin@123`
+- School Admin: `binitadulal54@gmail.com` / `SchoolAdmin@123`
+- Parent: `binita.dulal@midvalley.edu.np` / `Parent@123`
 
 ## System Architecture
 

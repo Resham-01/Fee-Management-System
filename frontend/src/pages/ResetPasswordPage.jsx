@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
+import { validatePassword, PASSWORD_RULES } from '../utils/validation';
 import { useToast, getErrorMessage } from '../context/ToastContext';
 import AuthLayout from '../components/layout/AuthLayout';
 import { Field } from '../components/ui/Input';
@@ -34,10 +35,10 @@ const ResetPasswordPage = () => {
       return;
     }
 
-    if (formData.newPassword.length < 6) {
-      const msg = 'Password must be at least 6 characters';
-      setError(msg);
-      showToast(msg, 'error');
+    const pwdError = validatePassword(formData.newPassword);
+    if (pwdError) {
+      setError(pwdError);
+      showToast(pwdError, 'error');
       return;
     }
 
@@ -87,7 +88,7 @@ const ResetPasswordPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <Field label="New Password" htmlFor="newPassword" required hint="Must be at least 6 characters.">
+          <Field label="New Password" htmlFor="newPassword" required hint={PASSWORD_RULES}>
             <PasswordInput id="newPassword" value={formData.newPassword} onChange={(e) => handleChange('newPassword', e.target.value)} placeholder="Enter new password" label="New Password" />
           </Field>
 

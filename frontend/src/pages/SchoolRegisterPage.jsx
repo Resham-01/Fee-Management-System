@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import PasswordInput from '../components/PasswordInput';
+import { validatePassword, PASSWORD_RULES } from '../utils/validation';
 import { useToast, getErrorMessage } from '../context/ToastContext';
 import AuthLayout from '../components/layout/AuthLayout';
 import Input, { Field } from '../components/ui/Input';
@@ -32,6 +33,14 @@ const SchoolRegisterPage = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    const pwdError = validatePassword(formData.adminPassword);
+    if (pwdError) {
+      setError(pwdError);
+      showToast(pwdError, 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -105,7 +114,7 @@ const SchoolRegisterPage = () => {
                 <Input id="adminEmail" type="email" name="adminEmail" value={formData.adminEmail} onChange={handleChange} required placeholder="admin@school.edu.np" />
               </Field>
               <div className="sm:col-span-2">
-                <Field label="Admin Password" htmlFor="adminPassword" required hint="Must be at least 6 characters.">
+                <Field label="Admin Password" htmlFor="adminPassword" required hint={PASSWORD_RULES}>
                   <PasswordInput id="adminPassword" value={formData.adminPassword} onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })} placeholder="Create a strong password" label="Admin Password" />
                 </Field>
               </div>

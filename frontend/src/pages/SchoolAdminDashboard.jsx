@@ -585,7 +585,7 @@ const SchoolAdminDashboard = () => {
                 <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      {['Name', 'Code', 'Class', 'Section', 'Parent', 'Actions'].map((h) => (
+                      {['Name', 'Code', 'Class', 'Parent', 'Actions'].map((h) => (
                         <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
                           {h}
                         </th>
@@ -602,7 +602,7 @@ const SchoolAdminDashboard = () => {
                           <Badge tone="slate">{student.studentCode}</Badge>
                         </td>
                         <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
-                        <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td>
+                        {/* <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td> */} 
                         <td data-label="Parent" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{student.parent?.name || '-'}</td>
                         <td data-label="Actions" className="px-6 py-4 whitespace-nowrap">
                           <ActionButtons onEdit={() => handleEdit(student)} onDelete={() => handleDelete(student._id)} />
@@ -906,9 +906,9 @@ const SchoolAdminDashboard = () => {
               ))}
             </Select>
           </Field>
-          <Field label="Section" htmlFor="st-section" required>
+          {/* <Field label="Section" htmlFor="st-section" required>
             <Input id="st-section" value={studentForm.section} onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })} required placeholder="e.g. A" />
-          </Field>
+          </Field> */}
           {!editingStudent && (
             <div className="sm:col-span-2 flex items-start gap-2 px-3.5 py-3 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 text-xs">
               <Icon.info className="w-4 h-4 mt-0.5 flex-shrink-0" />

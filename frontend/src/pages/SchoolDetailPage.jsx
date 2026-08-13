@@ -430,7 +430,7 @@ const SchoolDetailPage = () => {
                 <table className="w-full responsive-table">
                   <thead>
                     <tr className="border-b border-slate-100">
-                      {['Name', 'Code', 'Class', 'Section', 'Parent'].map((h) => (
+                      {['Name', 'Code', 'Class', 'Parent'].map((h) => (
                         <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
                           {h}
                         </th>
@@ -447,7 +447,7 @@ const SchoolDetailPage = () => {
                           <Badge tone="slate">{student.studentCode}</Badge>
                         </td>
                         <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
-                        <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td>
+                        {/* <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td> */}
                         <td data-label="Parent" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
                         </td>

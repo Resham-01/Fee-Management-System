@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast, getErrorMessage } from '../context/ToastContext';
 import AppLayout from '../components/layout/AppLayout';
 import PasswordInput from '../components/PasswordInput';
+import { validatePassword, PASSWORD_RULES } from '../utils/validation';
 import Icon from '../components/ui/icons';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -36,12 +37,13 @@ const ChangePasswordPage = () => {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters long.');
-      return;
-    }
     if (newPassword !== confirmPassword) {
       setError('New password and confirmation do not match.');
+      return;
+    }
+    const pwdError = validatePassword(newPassword);
+    if (pwdError) {
+      setError(pwdError);
       return;
     }
 
@@ -76,7 +78,7 @@ const ChangePasswordPage = () => {
         <Card>
           <div className="card-header">
             <h2 className="text-base font-bold font-display text-slate-900">Update password</h2>
-            <p className="mt-0.5 text-sm text-slate-500">Your new password must be at least 6 characters long.</p>
+            <p className="mt-0.5 text-sm text-slate-500">{PASSWORD_RULES}.</p>
           </div>
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
             <Field label="Current Password" htmlFor="cp-current" required>
@@ -97,7 +99,7 @@ const ChangePasswordPage = () => {
                   label="New Password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="8+ characters, A-Z, a-z, 0-9, special"
                   autoComplete="new-password"
                 />
               </Field>
