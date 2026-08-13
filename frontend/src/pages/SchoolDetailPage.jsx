@@ -305,7 +305,7 @@ const SchoolDetailPage = () => {
                 Pending: NPR {statistics.pendingAmount.toLocaleString()} · Overdue: NPR {statistics.overdueAmount.toLocaleString()}
               </p>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex flex-wrap gap-2 flex-shrink-0">
               <Button onClick={handleNotifyParents} loading={notifying} variant="secondary" icon={<Icon.bell className="w-4 h-4" />}>
                 Notify All Parents
               </Button>

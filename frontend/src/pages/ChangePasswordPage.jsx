@@ -8,7 +8,7 @@ import Icon from '../components/ui/icons';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import PageHeader from '../components/ui/PageHeader';
-import Field from '../components/ui/Input';
+import { Field } from '../components/ui/Input';
 
 const ROLE_HOME = {
   super_admin: '/super-admin',
@@ -48,7 +48,7 @@ const ChangePasswordPage = () => {
     setLoading(true);
     try {
       await apiClient.post('/auth/change-password', {
-        currentPassword,
+        oldPassword: currentPassword,
         newPassword,
       });
       showToast('Password changed successfully', 'success');

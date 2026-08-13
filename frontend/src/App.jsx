@@ -15,6 +15,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import PaymentResultPage from './pages/PaymentResultPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 const AppContent = () => {
   const { user } = useAuth();
@@ -27,12 +28,11 @@ const AppContent = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between h-16 items-center">
                 <Link to="/" className="flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white flex items-center justify-center shadow-sm shadow-brand-600/30">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z" />
-                      <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" opacity="0.6" />
-                    </svg>
-                  </span>
+                  <img
+                    src="/logo.png"
+                    alt="Shulkaa Suvidha"
+                    className="w-9 h-9 object-contain"
+                  />
                   <span className="text-lg font-bold font-display text-slate-900">Shulkaa Suvidha</span>
                 </Link>
                 <div className="flex items-center gap-2">
@@ -116,6 +116,7 @@ const AppContent = () => {
           />
           <Route path="/payments/result" element={<PaymentResultPage />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
     </Router>

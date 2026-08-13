@@ -25,7 +25,8 @@ apiClient.interceptors.response.use(
       const isPublicAuthRoute =
         url.includes('/auth/login') ||
         url.includes('/auth/forgot-password') ||
-        url.includes('/auth/reset-password');
+        url.includes('/auth/reset-password') ||
+        url.includes('/auth/change-password');
 
       if (!isPublicAuthRoute) {
         localStorage.removeItem('token');

@@ -12,12 +12,11 @@ const roleLabels = {
 
 const Logo = ({ compact = false }) => (
   <div className="flex items-center gap-2.5">
-    <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-white/10 backdrop-blur ring-1 ring-white/20 flex items-center justify-center">
-      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z" />
-        <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" opacity="0.6" />
-      </svg>
-    </div>
+    <img
+      src="/logo.png"
+      alt="Shulkaa Suvidha"
+      className="flex-shrink-0 w-9 h-9 object-contain"
+    />
     {!compact && (
       <div className="leading-tight">
         <p className="text-sm font-bold font-display text-white">Shulkaa Suvidha</p>

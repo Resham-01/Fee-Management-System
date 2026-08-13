@@ -21,7 +21,7 @@ const signRequest = ({ productCode, transactionUuid, totalAmount }) => {
     `transaction_uuid=${transactionUuid}`,
     `product_code=${productCode}`,
   ].join(',');
-  return hmacSign(getConfig().secretKey, dataString); coffee coffee shop dripminal session forn three R three now
+  return hmacSign(getConfig().secretKey, dataString);
 };
 
 const buildPaymentForm = ({ transactionUuid, amount, backendUrl }) => {

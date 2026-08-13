@@ -161,7 +161,7 @@ const NotificationPanel = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-lift border border-slate-200 z-50 overflow-hidden animate-scale-in">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-4rem)] bg-white rounded-2xl shadow-lift border border-slate-200 z-50 overflow-hidden animate-scale-in">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-sm font-bold font-display text-slate-900">Notifications</h3>
             {badgeCount > 0 && (

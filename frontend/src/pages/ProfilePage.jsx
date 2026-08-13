@@ -277,7 +277,7 @@ const ProfilePage = () => {
               )}
 
               {user?.role === 'school_admin' && stats && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard label="Students" value={stats.totalStudents} tone="brand" icon={<Icon.users />} />
                   <StatCard label="Invoices" value={stats.totalInvoices} tone="brand" icon={<Icon.receipt />} />
                   <StatCard label="Pending" value={`NPR ${stats.pendingAmount.toLocaleString()}`} tone="amber" icon={<Icon.clock />} />

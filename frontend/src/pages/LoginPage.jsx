@@ -91,7 +91,7 @@ const LoginPage = () => {
 
         <div className="mb-6">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">I am a</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {ROLE_OPTIONS.map((role) => (
               <button
                 key={role.value}
