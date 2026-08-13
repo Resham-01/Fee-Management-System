@@ -237,11 +237,16 @@ exports.forgotPassword = async (req, res) => {
       await user.save({ validateBeforeSave: false });
 
       const resetUrl = getResetUrl(resetToken);
-      await sendPasswordResetEmail({
-        to: user.email,
-        name: user.name,
-        resetUrl,
-      });
+      try {
+        await sendPasswordResetEmail({
+          to: user.email,
+          name: user.name,
+          resetUrl,
+        });
+      } catch (emailErr) {
+        // Never leak SMTP failures to the client; log for the developer instead.
+        logger.error('Failed to send password reset email', { error: emailErr.message });
+      }
     }
 
     res.json({

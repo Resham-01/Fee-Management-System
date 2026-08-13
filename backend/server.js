@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 
 const connectDB = require('./src/config/db');
 const logger = require('./src/config/logger');
+const { isEmailConfigured, verifyEmailConfig } = require('./src/utils/email');
 const { notFoundHandler, errorHandler } = require('./src/middleware/error.middleware');
 
 // Routes
@@ -58,6 +59,14 @@ connectDB()
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
     });
+
+    if (isEmailConfigured()) {
+      verifyEmailConfig()
+        .then(() => logger.info('SMTP connection verified successfully'))
+        .catch((err) => logger.error('SMTP configuration error — password reset emails will not send', { error: err.message }));
+    } else {
+      logger.warn('SMTP email not configured. Password reset links will only be logged to the console.');
+    }
   })
   .catch((err) => {
     logger.error('Failed to start server due to DB connection error', { error: err.message });
