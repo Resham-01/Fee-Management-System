@@ -70,6 +70,8 @@ This creates:
 - School Admin: `binitadulal54@gmail.com` / `SchoolAdmin@123`
 - Parent: `binita.dulal@midvalley.edu.np` / `Parent@123`
 
+### After email validation and verification  we update the real email here 
+
 ## System Architecture
 
 ### Data Isolation
