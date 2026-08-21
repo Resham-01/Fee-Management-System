@@ -25,7 +25,6 @@ const buildReceiptData = async (invoice, transaction) => {
     studentName: `${student.firstName} ${student.lastName}`,
     studentCode: student.studentCode,
     className: student.className,
-    section: student.section,
     parentName: parent?.name || '—',
     parentEmail: parent?.email || '—',
     term: invoice.term,
@@ -100,7 +99,7 @@ exports.getReceipts = async (req, res) => {
     }
 
     const invoices = await Invoice.find(invoiceQuery)
-      .populate('student', 'firstName lastName studentCode className section')
+      .populate('student', 'firstName lastName studentCode className')
       .populate('school', 'name')
       .sort({ updatedAt: -1 });
 

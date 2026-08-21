@@ -76,7 +76,6 @@ async function seed() {
       lastName: 'Sharma',
       studentCode: 'GVS-STU-5-001',
       className: 'Grade 5',
-      section: 'A',
       parent: parentUser._id,
     });
 

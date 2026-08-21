@@ -266,7 +266,6 @@ const ParentDashboard = () => {
                           <Badge tone="slate">{child.studentCode}</Badge>
                         </td>
                         <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.className}</td>
-                        {/* <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.section}</td> */}
                         <td data-label="Action" className="px-6 py-4 whitespace-nowrap">
                           <ActionButtons
                             showEdit={false}

@@ -447,7 +447,6 @@ const SchoolDetailPage = () => {
                           <Badge tone="slate">{student.studentCode}</Badge>
                         </td>
                         <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
-                        {/* <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td> */}
                         <td data-label="Parent" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
                         </td>

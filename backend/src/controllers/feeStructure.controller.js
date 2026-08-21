@@ -11,7 +11,6 @@ const feeStructureSchema = Joi.object({
   className: Joi.string()
     .valid(...GRADE_OPTIONS, null, '')
     .allow(null, ''),
-  section: Joi.string().allow(null, ''),
   monthlyFee: Joi.number().required().min(0),
   scholarship: Joi.number().min(0).default(0),
   scholarshipType: Joi.string().valid('none', 'percentage', 'fixed').default('none'),
@@ -33,7 +32,7 @@ exports.getFeeStructures = async (req, res) => {
     }
 
     const feeStructures = await FeeStructure.find({ school: req.user.school, isActive: true })
-      .populate('student', 'firstName lastName studentCode className section')
+      .populate('student', 'firstName lastName studentCode className')
       .sort({ createdAt: -1 });
 
     res.json(feeStructures);
@@ -59,7 +58,6 @@ exports.createFeeStructure = async (req, res) => {
       ...value,
       student: value.student || null,
       className: value.className || null,
-      section: value.section || null,
     };
 
     if (normalized.student) {
@@ -73,12 +71,11 @@ exports.createFeeStructure = async (req, res) => {
       // Deactivate old fee structures for this student
       await FeeStructure.updateMany({ student: normalized.student, isActive: true }, { isActive: false });
     } else {
-      // Deactivate old class-wise structure for same class/section
+      // Deactivate old class-wise structure for same class
       await FeeStructure.updateMany(
         {
           school: req.user.school,
           className: normalized.className,
-          section: normalized.section || null,
           isActive: true,
         },
         { isActive: false }
@@ -92,7 +89,7 @@ exports.createFeeStructure = async (req, res) => {
 
     const populated = await FeeStructure.findById(feeStructure._id).populate(
       'student',
-      'firstName lastName studentCode className section'
+      'firstName lastName studentCode className'
     );
 
     res.status(201).json(populated);
@@ -124,7 +121,6 @@ exports.updateFeeStructure = async (req, res) => {
       ...value,
       student: value.student || null,
       className: value.className || null,
-      section: value.section || null,
     };
 
     if (normalized.student) {
@@ -139,7 +135,7 @@ exports.updateFeeStructure = async (req, res) => {
 
     const populated = await FeeStructure.findById(feeStructure._id).populate(
       'student',
-      'firstName lastName studentCode className section'
+      'firstName lastName studentCode className'
     );
 
     res.json(populated);
@@ -214,9 +210,6 @@ exports.generateMonthlyInvoices = async (req, res) => {
           targetStudents = [feeStruct.student];
         } else if (feeStruct.className) {
           const filters = { school: req.user.school, className: feeStruct.className };
-          if (feeStruct.section) {
-            filters.section = feeStruct.section;
-          }
           targetStudents = await Student.find(filters);
         }
 

@@ -309,7 +309,7 @@ const ProfilePage = () => {
                       <table className="w-full responsive-table">
                         <thead>
                           <tr className="border-b border-slate-100">
-                            {['Name', 'Student Code', 'Class', 'Section'].map((h) => (
+                            {['Name', 'Student Code', 'Class'].map((h) => (
                               <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
                                 {h}
                               </th>
@@ -326,7 +326,6 @@ const ProfilePage = () => {
                                 <Badge tone="slate">{child.studentCode}</Badge>
                               </td>
                               <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.className}</td>
-                              <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{child.section}</td>
                             </tr>
                           ))}
                         </tbody>

@@ -12,7 +12,6 @@ const feeStructureSchema = new mongoose.Schema(
       ref: 'Student',
     },
     className: { type: String },
-    section: { type: String },
     monthlyFee: { type: Number, required: true },
     scholarship: { type: Number, default: 0 }, // Scholarship amount (discount)
     scholarshipType: {

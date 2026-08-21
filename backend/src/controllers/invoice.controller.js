@@ -53,7 +53,7 @@ exports.getSchoolInvoices = async (req, res) => {
     );
 
     const invoices = await Invoice.find({ school: schoolId })
-      .populate('student', 'firstName lastName studentCode className section')
+      .populate('student', 'firstName lastName studentCode className')
       .sort({ createdAt: -1 });
 
     res.json(invoices);
@@ -93,7 +93,7 @@ exports.createInvoice = async (req, res) => {
 
     const populated = await Invoice.findById(invoice._id).populate(
       'student',
-      'firstName lastName studentCode className section'
+      'firstName lastName studentCode className'
     );
 
     res.status(201).json(populated);
@@ -121,7 +121,7 @@ exports.getParentInvoices = async (req, res) => {
     const studentIds = students.map((s) => s._id);
 
     const invoices = await Invoice.find({ student: { $in: studentIds } })
-      .populate('student', 'firstName lastName studentCode className section')
+      .populate('student', 'firstName lastName studentCode className')
       .sort({ createdAt: -1 });
 
     // Attach the latest non-successful payment attempt so parents can see
@@ -188,7 +188,7 @@ exports.updateInvoice = async (req, res) => {
 
     const populated = await Invoice.findById(invoice._id).populate(
       'student',
-      'firstName lastName studentCode className section'
+      'firstName lastName studentCode className'
     );
 
     res.json(populated);

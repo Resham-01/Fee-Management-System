@@ -50,14 +50,12 @@ const emptyStudentForm = () => ({
   firstName: '',
   lastName: '',
   className: '',
-  section: '',
   parent: '',
 });
 
 const emptyFeeStructureForm = () => ({
   student: '',
   className: '',
-  section: '',
   monthlyFee: '',
   scholarship: '',
   scholarshipType: 'none',
@@ -201,7 +199,6 @@ const SchoolAdminDashboard = () => {
       firstName: student.firstName,
       lastName: student.lastName,
       className: student.className,
-      section: student.section,
       parent: student.parent?._id || '',
     });
     setShowStudentForm(true);
@@ -299,7 +296,6 @@ const SchoolAdminDashboard = () => {
         ...feeStructureForm,
         student: feeTargetMode === 'student' ? feeStructureForm.student : null,
         className: feeTargetMode === 'class' ? feeStructureForm.className : null,
-        section: feeTargetMode === 'class' ? feeStructureForm.section : null,
         monthlyFee: parseFloat(feeStructureForm.monthlyFee),
         scholarship: parseFloat(feeStructureForm.scholarship) || 0,
         effectiveFrom: new Date(feeStructureForm.effectiveFrom),
@@ -332,7 +328,6 @@ const SchoolAdminDashboard = () => {
     setFeeStructureForm({
       student: feeStruct.student?._id || '',
       className: feeStruct.className || '',
-      section: feeStruct.section || '',
       monthlyFee: feeStruct.monthlyFee,
       scholarship: feeStruct.scholarship,
       scholarshipType: feeStruct.scholarshipType,
@@ -381,7 +376,7 @@ const SchoolAdminDashboard = () => {
   const totalPending = invoices.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + inv.amount, 0);
   const totalPaid = invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0);
   const studentsByClass = students.reduce((acc, student) => {
-    const key = `${student.className} - ${student.section}`;
+    const key = student.className;
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -602,7 +597,6 @@ const SchoolAdminDashboard = () => {
                           <Badge tone="slate">{student.studentCode}</Badge>
                         </td>
                         <td data-label="Class" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.className}</td>
-                        {/* <td data-label="Section" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{student.section}</td> */} 
                         <td data-label="Parent" className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{student.parent?.name || '-'}</td>
                         <td data-label="Actions" className="px-6 py-4 whitespace-nowrap">
                           <ActionButtons onEdit={() => handleEdit(student)} onDelete={() => handleDelete(student._id)} />
@@ -706,7 +700,7 @@ const SchoolAdminDashboard = () => {
                           <td data-label="Target" className="px-6 py-4 whitespace-nowrap font-medium text-slate-800">
                             {feeStruct.student
                               ? `${feeStruct.student?.firstName} ${feeStruct.student?.lastName}`
-                              : `${feeStruct.className}${feeStruct.section ? ` (${feeStruct.section})` : ''} — All`}
+                              : `${feeStruct.className} — All`}
                           </td>
                           <td data-label="Monthly Fee" className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                             NPR {feeStruct.monthlyFee.toLocaleString()}
@@ -906,9 +900,6 @@ const SchoolAdminDashboard = () => {
               ))}
             </Select>
           </Field>
-          {/* <Field label="Section" htmlFor="st-section" required>
-            <Input id="st-section" value={studentForm.section} onChange={(e) => setStudentForm({ ...studentForm, section: e.target.value })} required placeholder="e.g. A" />
-          </Field> */}
           {!editingStudent && (
             <div className="sm:col-span-2 flex items-start gap-2 px-3.5 py-3 rounded-xl bg-brand-50 border border-brand-100 text-brand-800 text-xs">
               <Icon.info className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -994,9 +985,6 @@ const SchoolAdminDashboard = () => {
                     </option>
                   ))}
                 </Select>
-              </Field>
-              <Field label="Section (Optional)" htmlFor="fs-section">
-                <Input id="fs-section" value={feeStructureForm.section} onChange={(e) => setFeeStructureForm({ ...feeStructureForm, section: e.target.value })} placeholder="e.g. A" />
               </Field>
             </>
           )}

@@ -14,7 +14,6 @@ const createStudentSchema = Joi.object({
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
   className: gradeSchema,
-  section: Joi.string().required(),
   parent: Joi.string().allow(null, ''),
 });
 
@@ -23,7 +22,6 @@ const updateStudentSchema = Joi.object({
   lastName: Joi.string().required(),
   studentCode: Joi.string().required(),
   className: gradeSchema,
-  section: Joi.string().required(),
   parent: Joi.string().allow(null, ''),
 });
 

@@ -11,7 +11,6 @@ const studentSchema = new mongoose.Schema(
     lastName: { type: String, required: true },
     studentCode: { type: String, required: true, unique: true },
     className: { type: String, required: true },
-    section: { type: String, required: true },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -65,7 +65,7 @@ const generateReceiptHtml = (receipt) => {
         <div class="meta-item"><label>Payment Date</label><span>${formatDate(receipt.paidAt)}</span></div>
         <div class="meta-item"><label>Student</label><span>${receipt.studentName}</span></div>
         <div class="meta-item"><label>Student Code</label><span>${receipt.studentCode}</span></div>
-        <div class="meta-item"><label>Class / Section</label><span>${receipt.className} - ${receipt.section}</span></div>
+        <div class="meta-item"><label>Class</label><span>${receipt.className}</span></div>
         <div class="meta-item"><label>Parent</label><span>${receipt.parentName || '—'}</span></div>
         <div class="meta-item"><label>Term</label><span>${receipt.term}</span></div>
         <div class="meta-item"><label>Payment Method</label><span>${gatewayLabel(receipt.gateway)}</span></div>
